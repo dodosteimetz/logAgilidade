@@ -501,7 +501,8 @@
         const dropMsg = document.getElementById('dropMsg');
         const logInput = document.getElementById('logInput');
 
-        if (URL_APPS_SCRIPT === "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec" || !URL_APPS_SCRIPT) {
+        // Note que o IF agora só verifica se a URL está vazia
+        if (!URL_APPS_SCRIPT) {
             dropMsg.innerHTML = "⚠️ API não configurada. Use o modo Offline.";
             return;
         }
