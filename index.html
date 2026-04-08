@@ -498,45 +498,34 @@
 
     // --- Sincronização Google Sheets ---
     async function syncFromSheets() {
-        const dropMsg = document.getElementById('dropMsg');
-        const logInput = document.getElementById('logInput');
+    const dropMsg = document.getElementById('dropMsg');
+    const logInput = document.getElementById('logInput');
 
-        // Note que o IF agora só verifica se a URL está vazia
-        if (!URL_APPS_SCRIPT) {
-            dropMsg.innerHTML = "⚠️ API não configurada. Use o modo Offline.";
-            return;
-        }
+    if (!URL_APPS_SCRIPT) return;
 
-        dropMsg.innerHTML = "⏳ Puxando dados da Nuvem...";
-        dropMsg.classList.remove('file-loaded');
+    try {
+        const response = await fetch(URL_APPS_SCRIPT);
+        const rows = await response.json();
 
-        try {
-            const response = await fetch(URL_APPS_SCRIPT);
-            const rows = await response.json();
-
-            // Transforma a matriz do excel em texto para a calculadora ler
-            const logText = rows.map(row => {
-                // Ignora a linha de cabeçalho ou linhas sem laps
-                if (!row[1] || row[1] === "Laps" || row[1] === "") return ""; 
-                
-                // Formata a data (caso o excel envie como ISO string)
-                let dataIso = row[0].toString().substring(0, 19).replace('T', ' ');
-                
-                return `[${dataIso}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
-            }).filter(line => line !== "").join('\n');
-
-            logInput.value = logText;
+        const logText = rows.map(row => {
+            if (!row[1] || row[1] === "" || isNaN(parseInt(row[1]))) return ""; 
             
-            // Dispara o cálculo
-            processLog(); 
+            // Tratamento de data para garantir que o Sheets não quebre o padrão
+            let dataRaw = row[0].toString();
+            let dataFormatada = dataRaw.includes('T') ? dataRaw.split('T')[0] : dataRaw;
 
-            dropMsg.innerHTML = "✅ Sincronizado com Nuvem";
-            dropMsg.classList.add('file-loaded');
-        } catch (err) {
-            console.error("Erro na sincronização:", err);
-            dropMsg.innerHTML = "❌ Erro de Sincronização";
-        }
+            // Criamos a linha garantindo que o formato seja idêntico ao que a Regex espera
+            return `[${dataFormatada}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
+        }).filter(line => line !== "").join('\n');
+
+        logInput.value = logText;
+        processLog(); 
+
+        dropMsg.innerHTML = "✅ Sincronizado: " + rows.length + " linhas";
+    } catch (err) {
+        dropMsg.innerHTML = "❌ Erro na sincronização";
     }
+}
 
     // Tenta sincronizar automaticamente quando a página carrega
     window.addEventListener('load', syncFromSheets);
