@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Agility + Tarddian</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+        :root {
+            --bg: #1e1e2e;
+            --surface: #181825;
+            --surface2: #11111b;
+            --overlay: #313244;
+            --muted: #45475a;
+            --text: #cdd6f4;
+            --subtext: #bac2de;
+            --blue: #89b4fa;
+            --green: #a6e3a1;
+            --teal: #94e2d5;
+            --yellow: #f9e2af;
+            --red: #f38ba8;
+            --mauve: #cba6f7;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            padding: 30px 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--surface);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            max-width: 860px;
+            width: 100%;
+            height: fit-content;
+        }
+
+        h1 {
+            color: var(--blue);
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 span {
+            color: var(--teal);
+        }
+
+        /* --- Log Input --- */
+        .log-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--subtext);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        textarea {
+            background-color: var(--overlay);
+            border: 1px solid var(--muted);
+            color: var(--text);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            resize: vertical;
+            height: 110px;
+            width: 100%;
+            margin-bottom: 24px;
+            transition: border-color 0.2s;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--blue);
+        }
+
+        /* --- Collapsible Config --- */
+        .config-section {
+            margin-bottom: 20px;
+            border: 1px solid var(--muted);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .config-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            cursor: pointer;
+            background-color: var(--overlay);
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .config-header:hover {
+            background-color: var(--muted);
+        }
+
+        .config-header h2 {
+            color: var(--blue);
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chevron {
+            color: var(--subtext);
+            font-size: 0.85rem;
+            transition: transform 0.3s ease;
+        }
+
+        .config-body {
+            padding: 16px;
+            overflow: hidden;
+            max-height: 300px;
+            transition: max-height 0.4s ease, padding 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .config-body.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--subtext);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input {
+            background-color: var(--surface2);
+            border: 1px solid var(--muted);
+            color: var(--text);
+            padding: 9px 12px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--blue);
+        }
+
+        /* --- Button --- */
+        button {
+            background-color: var(--green);
+            color: #11111b;
+            border: none;
+            padding: 14px 20px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'Syne', sans-serif;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            letter-spacing: 0.5px;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover { background-color: var(--teal); }
+        button:active { transform: scale(0.99); }
+
+        /* --- Output State Boxes --- */
+        #resultOutput {
+            margin-top: 24px;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .result-col {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .state-box {
+            background-color: var(--surface2);
+            border-radius: 10px;
+            padding: 18px;
+            border: 1px solid var(--muted);
+            flex: 1;
+        }
+
+        .state-box-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--muted);
+        }
+
+        .state-box-title.blue  { color: var(--blue); border-color: var(--blue); }
+        .state-box-title.green { color: var(--green); border-color: var(--green); }
+        .state-box-title.mauve { color: var(--mauve); border-color: var(--mauve); }
+        .state-box-title.teal  { color: var(--teal); border-color: var(--teal); }
+
+        .stats-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; }
+        .stats-table thead th { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--subtext); text-align: right; padding: 0 0 8px 12px; border-bottom: 1px solid var(--muted); }
+        .stats-table thead th:first-child { text-align: left; padding-left: 0; }
+        .stats-table tbody td { padding: 7px 0 7px 12px; font-size: 0.84rem; font-weight: 600; text-align: right; vertical-align: baseline; border-bottom: 1px solid rgba(69,71,90,0.3); }
+        .stats-table tbody tr:last-child td { border-bottom: none; }
+        .stats-table tbody td:first-child { text-align: left; font-size: 0.78rem; font-weight: 400; color: var(--subtext); padding-left: 0; }
+
+        .stat-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; font-family: 'JetBrains Mono', monospace; }
+        .stat-row:last-child { margin-bottom: 0; }
+        .stat-label { font-size: 0.78rem; color: var(--subtext); }
+        .stat-value { font-size: 0.88rem; font-weight: 600; color: var(--text); text-align: right; }
+
+        .streak-grid { display: grid; grid-template-columns: 55px 70px 75px; align-items: baseline; gap: 4px; }
+        .s-laps { text-align: right; }
+        .s-text { text-align: right; font-size: 0.80rem; } 
+        .s-time { text-align: right; white-space: nowrap; }
+
+        .stat-value.highlight-blue  { color: var(--blue); }
+        .stat-value.highlight-green { color: var(--green); }
+        .stat-value.highlight-teal  { color: var(--teal); }
+        .stat-value.highlight-yellow{ color: var(--yellow); }
+        .stat-value.highlight-mauve { color: var(--mauve); }
+        .stat-value.highlight-red   { color: var(--red); }
+
+        @media (max-width: 600px) { .result-grid, .grid { grid-template-columns: 1fr; } }
+
+        /* --- Drop Zone --- */
+        .drop-zone { margin-bottom: 24px; }
+        .drop-zone textarea { margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; transition: border-color 0.2s, background-color 0.2s; }
+        .drop-zone.dragging textarea { border-color: var(--green); background-color: rgba(166,227,161,0.07); }
+        .drop-bar { background-color: var(--overlay); border: 1px solid var(--muted); border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; }
+        
+        .drop-msg { font-size: 0.78rem; color: var(--subtext); cursor: pointer; transition: color 0.2s; display: flex; align-items: center; gap: 8px;}
+        .drop-msg:hover { color: var(--blue); }
+        .drop-msg.file-loaded { color: var(--green); }
+
+        .sync-btn { background: none; border: 1px solid var(--muted); color: var(--text); padding: 4px 10px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; font-family: 'JetBrains Mono', monospace; width: auto; }
+        .sync-btn:hover { background: var(--surface2); color: var(--blue); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>
+        Wilderness Agility <span>&</span> Tracker
+    </h1>
+
+    <div class="config-section" id="logSection" style="margin-bottom:20px">
+        <div class="config-header" onclick="toggleLog()">
+            <h2>Log de Drops (Nuvem)</h2>
+            <span class="chevron" id="logChevron">▼</span>
+        </div>
+        <div class="config-body" id="logBody">
+            <div id="dropZone" class="drop-zone" style="margin-bottom:0">
+                <textarea id="logInput" placeholder="Aguardando dados da nuvem... Ou cole/solte seu log offline aqui."></textarea>
+                <div class="drop-bar">
+                    <span id="dropMsg" class="drop-msg">🔄 Preparando sincronização...</span>
+                    <div>
+                        <input type="file" id="fileInput" accept=".txt" style="display:none">
+                        <button class="sync-btn" onclick="syncFromSheets()">Forçar Sincronização</button>
+                        <button class="sync-btn" onclick="document.getElementById('fileInput').click()">Abrir TXT</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-section" id="configSection">
+        <div class="config-header" onclick="toggleConfig()">
+            <h2>Configurações de Cálculo</h2>
+            <span class="chevron" id="chevron">▼</span>
+        </div>
+        <div class="config-body" id="configBody">
+            <div class="grid">
+                <div class="input-group">
+                    <label for="valVenda">Valor de Venda (Core)</label>
+                    <input type="text" id="valVenda" value="425m" placeholder="Ex: 425m">
+                </div>
+                <div class="input-group">
+                    <label for="lapsHr">Laps por Hora (Agility)</label>
+                    <input type="number" id="lapsHr" value="83" placeholder="Ex: 83">
+                </div>
+                <div class="input-group">
+                    <label for="crystHr">Tarddian Crystals / Hora</label>
+                    <input type="number" id="crystHr" value="2100">
+                </div>
+                <div class="input-group">
+                    <label for="crystPerThree">Crystals p/ 3 Componentes</label>
+                    <input type="number" id="crystPerThree" value="750">
+                </div>
+                <div class="input-group">
+                    <label for="compNeeded">Componentes p/ Core</label>
+                    <input type="number" id="compNeeded" value="7">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button onclick="processLog()">Gerar Resumo Completo</button>
+
+    <div id="resultOutput">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px">
+            <div class="state-box" style="display:flex; flex-direction:column;">
+                <div class="state-box-title teal">Sessões</div>
+                <div style="display:flex; flex-direction:column; justify-content:space-between; flex:1;">
+                    <div class="stat-row" style="flex-direction:column; align-items:flex-start; gap:4px; margin-bottom:0; border-bottom:1px solid rgba(69,71,90,0.3); padding-bottom:10px;">
+                        <span class="stat-label">Sessão Mais Longa</span>
+                        <span class="stat-value highlight-blue" id="r-longest-session" style="font-size:0.84rem; font-family:'JetBrains Mono',monospace">—</span>
+                    </div>
+                    <div class="stat-row" style="flex-direction:column; align-items:flex-start; gap:4px; margin-bottom:0;">
+                        <span class="stat-label">Média de Horas / Dia</span>
+                        <span class="stat-value highlight-green" id="r-avg-day" style="font-size:0.84rem; font-family:'JetBrains Mono',monospace">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="state-box" style="display:flex; flex-direction:column; height:100%;">
+                <div class="state-box-title teal">Horas por Dia</div>
+                <div id="r-per-day-list"
+                     style="display:flex; flex-direction:column; gap:7px; flex:1 1 0; min-height:0; overflow-y:auto; font-family:'JetBrains Mono',monospace; padding-right:4px; scrollbar-width:thin; scrollbar-color:var(--muted) transparent">
+                </div>
+            </div>
+        </div>
+
+        <div class="result-grid">
+            <div class="result-col">
+                <div class="state-box">
+                    <div class="state-box-title blue">Soma & Média Global</div>
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th style="color:var(--blue)">Soma</th>
+                                <th style="color:var(--green)">Média</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Laps</td>
+                                <td class="highlight-blue" id="r-laps">—</td>
+                                <td style="color:var(--subtext); font-size:0.72rem">—</td>
+                            </tr>
+                            <tr>
+                                <td>Cores</td>
+                                <td class="highlight-green" id="r-cores">—</td>
+                                <td class="highlight-green" id="r-avg-core" style="font-size:0.75rem">—</td>
+                            </tr>                           
+                            <tr>
+                                <td>Portables</td>
+                                <td class="highlight-yellow" id="r-portables">—</td>
+                                <td class="highlight-yellow" id="r-avg-portable" style="font-size:0.75rem">—</td>
+                            </tr>
+							<tr>
+                                <td>Shards</td>
+                                <td class="highlight-teal" id="r-shards">—</td>
+                                <td class="highlight-teal" id="r-avg-shard" style="font-size:0.75rem">—</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="state-box flex-fill">
+                    <div class="state-box-title teal">Rastreio de Seca (Cores)</div>
+                    <div class="stat-row">
+                        <span class="stat-label">Maior Seca (Max)</span>
+                        <span class="stat-value highlight-red" id="r-max-dry">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Menor Intervalo</span>
+                        <span class="stat-value highlight-green" id="r-min-dry">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Último Drop</span>
+                        <span class="stat-value highlight-blue" id="r-last-drop">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Desde o Último</span>
+                        <span class="stat-value highlight-yellow" id="r-current-dry">—</span>
+                    </div>
+                    <div class="stat-row" style="margin-top: -6px;">
+                        <span class="stat-label"></span>
+                        <span class="stat-value highlight-yellow" id="r-current-dry-gp">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-col">
+                <div class="state-box">
+                    <div class="state-box-title mauve">Análise GP / hr</div>
+                    <div class="stat-row">
+                        <span class="stat-label">Tempo em Agility</span>
+                        <span class="stat-value" id="r-time-agil">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Tempo nos Metamorfo</span>
+                        <span class="stat-value" id="r-time-cryst">—</span>
+                    </div>                    
+					<div class="stat-row">
+                        <span class="stat-label">Comp. Seren por hr</span>
+                        <span class="stat-value" id="r-comp-hr">—</span>
+                    </div>
+					<div class="stat-row">
+                        <span class="stat-label highlight-blue" style="color:var(--blue)">TEMPO TOTAL</span>
+                        <span class="stat-value highlight-blue" id="r-time-total">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Valor por Core</span>
+                        <span class="stat-value highlight-green" id="r-val-unit">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Receita Bruta</span>
+                        <span class="stat-value highlight-yellow" id="r-receita">—</span>
+                    </div>
+                </div>
+
+                <div class="state-box flex-fill">
+                    <div class="state-box-title green">Lucro Estimado (Por Core)</div>
+                    <div class="stat-row">
+                        <span class="stat-label">Na Pior Seca (Max)</span>
+                        <span class="stat-value highlight-red" id="r-gp-max">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">No Menor Intervalo</span>
+                        <span class="stat-value highlight-green" id="r-gp-min">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">No Último Drop</span>
+                        <span class="stat-value highlight-blue" id="r-gp-last">—</span>
+                    </div>
+                    
+                    <div class="stat-row" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--muted);">
+                        <span class="stat-label highlight-yellow" style="font-weight: 700;">MÉDIA GERAL</span>
+                        <span class="stat-value highlight-yellow" style="font-size: 1.15rem;" id="r-gp-geral">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // CONFIGURAÇÃO DO GOOGLE SHEETS AQUI 👇
+    // ==========================================
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec";
+
+    let configOpen = true;
+    let logOpen = true;
+
+    // --- Sincronização Google Sheets ---
+    async function syncFromSheets() {
+        const dropMsg = document.getElementById('dropMsg');
+        const logInput = document.getElementById('logInput');
+
+        if (URL_APPS_SCRIPT === "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec" || !URL_APPS_SCRIPT) {
+            dropMsg.innerHTML = "⚠️ API não configurada. Use o modo Offline.";
+            return;
+        }
+
+        dropMsg.innerHTML = "⏳ Puxando dados da Nuvem...";
+        dropMsg.classList.remove('file-loaded');
+
+        try {
+            const response = await fetch(URL_APPS_SCRIPT);
+            const rows = await response.json();
+
+            // Transforma a matriz do excel em texto para a calculadora ler
+            const logText = rows.map(row => {
+                // Ignora a linha de cabeçalho ou linhas sem laps
+                if (!row[1] || row[1] === "Laps" || row[1] === "") return ""; 
+                
+                // Formata a data (caso o excel envie como ISO string)
+                let dataIso = row[0].toString().substring(0, 19).replace('T', ' ');
+                
+                return `[${dataIso}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
+            }).filter(line => line !== "").join('\n');
+
+            logInput.value = logText;
+            
+            // Dispara o cálculo
+            processLog(); 
+
+            dropMsg.innerHTML = "✅ Sincronizado com Nuvem";
+            dropMsg.classList.add('file-loaded');
+        } catch (err) {
+            console.error("Erro na sincronização:", err);
+            dropMsg.innerHTML = "❌ Erro de Sincronização";
+        }
+    }
+
+    // Tenta sincronizar automaticamente quando a página carrega
+    window.addEventListener('load', syncFromSheets);
+
+    // --- Funções de UI e Cálculo ---
+    function toggleConfig() {
+        configOpen = !configOpen;
+        const body = document.getElementById('configBody');
+        const chevron = document.getElementById('chevron');
+        body.classList.toggle('collapsed', !configOpen);
+        chevron.style.transform = configOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+    }
+
+    function toggleLog() {
+        logOpen = !logOpen;
+        const body = document.getElementById('logBody');
+        const chevron = document.getElementById('logChevron');
+        body.classList.toggle('collapsed', !logOpen);
+        chevron.style.transform = logOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+    }
+
+    function parseDateFromLine(line) {
+        let m = line.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+        m = line.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+        m = line.match(/(\d{2})-(\d{2})-(\d{4})/);
+        if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+        return null;
+    }
+
+    function formatHours(horas) {
+        const h = Math.floor(horas);
+        const m = Math.round((horas - h) * 60);
+        if (h > 0 && m > 0) return `${h}h ${m}m`;
+        if (h > 0) return `${h}h`;
+        return `${m}m`;
+    }
+
+    function friendlyDate(iso) {
+        const [y, mo, d] = iso.split('-');
+        return `${d}/${mo}/${y}`;
+    }
+
+    function formatGP(num) {
+        if (num >= 1000000000) return (num / 1000000000).toFixed(2) + 'b';
+        if (num >= 1000000) return (num / 1000000).toFixed(2) + 'm';
+        if (num >= 1000) return (num / 1000).toFixed(2) + 'k';
+        return Math.floor(num).toString();
+    }
+
+    function parseInputGP(input) {
+        if (!input) return 0;
+        let str = input.toLowerCase().trim().replace(',', '.');
+        let multiplier = 1;
+        if (str.endsWith('k')) { multiplier = 1000; str = str.slice(0, -1); }
+        else if (str.endsWith('m')) { multiplier = 1000000; str = str.slice(0, -1); }
+        else if (str.endsWith('b')) { multiplier = 1000000000; str = str.slice(0, -1); }
+        let val = parseFloat(str);
+        return isNaN(val) ? 0 : val * multiplier;
+    }
+
+    function set(id, val) { document.getElementById(id).textContent = val; }
+    function setHTML(id, val) { document.getElementById(id).innerHTML = val; }
+
+    function formatLapsTime(laps, lapsHr) {
+        if (laps === 0) {
+            return `<div class="streak-grid"><span class="s-laps">0</span><span class="s-text">voltas ou</span><span class="s-time">0m</span></div>`;
+        }
+        let hrs = Math.floor(laps / lapsHr);
+        let mins = Math.round((laps / lapsHr - hrs) * 60);
+        if (mins === 60) { hrs += 1; mins = 0; }
+        let timeStr = hrs > 0 ? (mins > 0 ? `${hrs}:${mins.toString().padStart(2, '0')}h` : `${hrs}h`) : `${mins}m`;
+
+        return `<div class="streak-grid"><span class="s-laps">${laps.toLocaleString()}</span><span class="s-text">voltas ou</span><span class="s-time">${timeStr}</span></div>`;
+    }
+
+    function processLog() {
+        const logText = document.getElementById('logInput').value;
+        const valVenda = parseInputGP(document.getElementById('valVenda').value);
+        const lapsHr = parseFloat(document.getElementById('lapsHr').value) || 1;
+        const crystHr = parseFloat(document.getElementById('crystHr').value) || 1;
+        const crystPerThree = parseFloat(document.getElementById('crystPerThree').value) || 1;
+        const compNeeded = parseFloat(document.getElementById('compNeeded').value) || 0;
+
+        let totalLaps = 0, totalCores = 0, totalPortables = 0, totalShards = 0;
+        let currentDry = 0, maxDry = 0, minDry = Infinity, lastDropLaps = 0;
+        let foundCore = false;
+
+        let longestSessionLaps = 0;
+        let currentDate = null;
+        const perDay = {}; 
+        let sessionIndex = 0; 
+
+        const lines = logText.split('\n');
+        const regex = /Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)/i;
+
+        for (const line of lines) {
+            if (line.includes('[SOMA]')) continue;
+
+            const detectedDate = parseDateFromLine(line);
+            if (detectedDate) currentDate = detectedDate;
+
+            const match = line.match(regex);
+            if (match) {
+                let laps = parseInt(match[1], 10);
+                let cores = parseInt(match[2], 10);
+                
+                totalLaps += laps;
+                totalCores += cores;                
+                totalShards += parseInt(match[3], 10);
+                totalPortables += parseInt(match[4], 10);
+
+                currentDry += laps;
+                if (cores > 0) {
+                    foundCore = true;
+                    let effectiveDry = Math.floor(currentDry / cores);
+                    if (effectiveDry > maxDry) maxDry = effectiveDry;
+                    if (effectiveDry < minDry) minDry = effectiveDry;
+                    lastDropLaps = effectiveDry; 
+                    currentDry = 0; 
+                }
+
+                if (laps > longestSessionLaps) longestSessionLaps = laps;
+                const dayKey = currentDate || `session_${Math.floor(sessionIndex / 1) + 1}`;
+                perDay[dayKey] = (perDay[dayKey] || 0) + laps;
+                sessionIndex++;
+            }
+        }
+
+        if (totalLaps === 0) return;
+
+        const avgCore = totalCores > 0 ? `~1/${Math.round(totalLaps / totalCores)}` : 'N/A';
+        const avgShard = totalShards > 0 ? `~1/${Math.round(totalLaps / totalShards)}` : 'N/A';
+        const avgPortable = totalPortables > 0 ? `~1/${Math.round(totalLaps / totalPortables)}` : 'N/A';
+
+        const compHr = (crystHr / crystPerThree) * 3;
+        const tempoAgilityHoras = totalLaps / lapsHr;
+        const tempoCrystalsHoras = (totalCores * compNeeded) / compHr;
+        const tempoTotalProjetoHoras = tempoAgilityHoras + tempoCrystalsHoras;
+        const receitaTotal = totalCores * valVenda;
+        const gpPorHora = tempoTotalProjetoHoras > 0 ? (receitaTotal / tempoTotalProjetoHoras) : 0;
+
+        const tempoCryst1Core = compNeeded > 0 ? (compNeeded / compHr) : 0;
+        
+        const calcStreakGpHr = (lapsDaSeca) => {
+            if (lapsDaSeca === 0 || valVenda === 0) return 'N/A';
+            const tempoAgilCore = lapsDaSeca / lapsHr;
+            const tempoTotalEsseCore = tempoAgilCore + tempoCryst1Core;
+            return formatGP(valVenda / tempoTotalEsseCore) + '/hr';
+        };
+
+        const calcStreakGpHrShort = (lapsDaSeca) => {
+            if (lapsDaSeca === 0 || valVenda === 0) return 'N/A';
+            const tempoAgilCore = lapsDaSeca / lapsHr;
+            const tempoTotalEsseCore = tempoAgilCore + tempoCryst1Core;
+            let val = valVenda / tempoTotalEsseCore;
+            
+            if (val >= 1000000000) return Math.floor(val / 1000000000) + 'b/h';
+            if (val >= 1000000) return Math.floor(val / 1000000) + 'm/h';
+            if (val >= 1000) return Math.floor(val / 1000) + 'k/h';
+            return Math.floor(val).toString() + '/h';
+        };
+
+        set('r-laps', totalLaps.toLocaleString());
+        set('r-cores', totalCores.toLocaleString());        
+        set('r-portables', totalPortables.toLocaleString());
+		set('r-shards', totalShards.toLocaleString());
+		
+        set('r-avg-core', avgCore);        
+        set('r-avg-portable', avgPortable);
+		set('r-avg-shard', avgShard);
+		
+        set('r-comp-hr', compHr.toFixed(2) + ' ');
+        set('r-time-agil', tempoAgilityHoras.toFixed(2) + 'h');
+        set('r-time-cryst', tempoCrystalsHoras.toFixed(2) + 'h');
+        set('r-time-total', tempoTotalProjetoHoras.toFixed(2) + 'h');
+        set('r-val-unit', formatGP(valVenda));
+        set('r-receita', formatGP(receitaTotal));
+
+        if (!foundCore) minDry = 0;
+        
+        setHTML('r-max-dry', maxDry > 0 ? formatLapsTime(maxDry, lapsHr) : 'N/A');
+        setHTML('r-min-dry', foundCore ? formatLapsTime(minDry, lapsHr) : 'N/A');
+        setHTML('r-last-drop', foundCore ? formatLapsTime(lastDropLaps, lapsHr) : 'N/A');
+        setHTML('r-current-dry', formatLapsTime(currentDry, lapsHr));
+        
+        let currentGpStr = currentDry > 0 ? calcStreakGpHrShort(currentDry) : 'N/A';
+        setHTML('r-current-dry-gp', `<div class="streak-grid"><span class="s-laps"></span><span class="s-text">ou</span><span class="s-time">${currentGpStr}</span></div>`);
+
+        set('r-gp-max', maxDry > 0 ? calcStreakGpHr(maxDry) : 'N/A');
+        set('r-gp-min', foundCore ? calcStreakGpHr(minDry) : 'N/A');
+        set('r-gp-last', foundCore ? calcStreakGpHr(lastDropLaps) : 'N/A');
+        set('r-gp-geral', gpPorHora > 0 ? formatGP(gpPorHora) + '/hr' : '0/hr');
+
+        const hasDates = Object.keys(perDay).some(k => !k.startsWith('session_'));
+        const dayKeys = Object.keys(perDay).sort();
+        const numDays = dayKeys.length;
+
+        const longestH = longestSessionLaps / lapsHr;
+        set('r-longest-session', longestSessionLaps > 0 ? `${longestSessionLaps.toLocaleString()} voltas · ${formatHours(longestH)}` : '—');
+
+        const listEl = document.getElementById('r-per-day-list');
+        listEl.innerHTML = '';
+        let totalDayHours = 0;
+        for (const key of dayKeys) {
+            const dayLaps = perDay[key];
+            const dayH = dayLaps / lapsHr;
+            totalDayHours += dayH;
+            const label = hasDates ? friendlyDate(key) : key.replace('session_', 'Sessão ');
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:0.82rem; border-bottom:1px solid rgba(69,71,90,0.3); padding-bottom:6px;';
+            row.innerHTML = `<span style="color:var(--subtext); white-space:nowrap">${label}</span>
+                             <span style="color:var(--text); font-weight:600; white-space:nowrap">${dayLaps.toLocaleString()} voltas&nbsp;<span style="color:var(--teal)">· ${formatHours(dayH)}</span></span>`;
+            listEl.appendChild(row);
+        }
+        if (listEl.lastChild) listEl.lastChild.style.borderBottom = 'none';
+
+        const avgDayH = numDays > 0 ? totalDayHours / numDays : 0;
+        set('r-avg-day', numDays > 0 ? `${formatHours(avgDayH)} / dia` : '—');
+
+        document.getElementById('resultOutput').style.display = 'block';
+
+        if (configOpen) toggleConfig();
+        if (logOpen) toggleLog();
+        setTimeout(() => { listEl.scrollTop = listEl.scrollHeight; }, 50);
+    }
+
+    // Fallback Offline Drag & Drop
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragging'); });
+    dropZone.addEventListener('dragleave', e => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('dragging'); });
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault(); dropZone.classList.remove('dragging');
+        if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+    });
+
+    function loadFile(file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('logInput').value = e.target.result;
+            document.getElementById('dropMsg').innerHTML = '✅ TXT Carregado: ' + file.name;
+            document.getElementById('dropMsg').classList.add('file-loaded');
+            processLog();
+        };
+        reader.readAsText(file, 'UTF-8');
+    }
+</script>
+
+</body>
+</html>
