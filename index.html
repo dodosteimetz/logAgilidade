@@ -508,21 +508,37 @@
         const rows = await response.json();
 
         const logText = rows.map(row => {
-            if (!row[1] || row[1] === "" || isNaN(parseInt(row[1]))) return ""; 
+            // Se a linha não tiver dados na coluna de Laps, ignora
+            if (row[1] === undefined || row[1] === null || row[1] === "") return "";
             
-            // Tratamento de data para garantir que o Sheets não quebre o padrão
-            let dataRaw = row[0].toString();
-            let dataFormatada = dataRaw.includes('T') ? dataRaw.split('T')[0] : dataRaw;
+            // Forçamos tudo a virar texto puro para evitar que o JS mude datas
+            let dataRaw = String(row[0]).trim();
+            
+            // Se o Google mandou uma data completa tipo "Sat Mar 21...", 
+            // tentamos extrair apenas a parte que nos interessa ou usamos como está
+            if (dataRaw.includes('GMT')) {
+                // Tenta converter data longa para o padrão YYYY-MM-DD
+                const d = new Date(dataRaw);
+                dataRaw = d.getFullYear() + "-" + 
+                          String(d.getMonth() + 1).padStart(2, '0') + "-" + 
+                          String(d.getDate()).padStart(2, '0') + " " +
+                          String(d.getHours()).padStart(2, '0') + ":" +
+                          String(d.getMinutes()).padStart(2, '0');
+            }
 
-            // Criamos a linha garantindo que o formato seja idêntico ao que a Regex espera
-            return `[${dataFormatada}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
+            // Montamos a string exatamente como o seu log original
+            return `[${dataRaw}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
         }).filter(line => line !== "").join('\n');
 
         logInput.value = logText;
         processLog(); 
 
-        dropMsg.innerHTML = "✅ Sincronizado: " + rows.length + " linhas";
+        // Mostra o total de laps processadas para você conferir na hora
+        const totalLapsCarregadas = document.getElementById('r-laps').textContent;
+        dropMsg.innerHTML = `✅ Sincronizado! Total Laps: ${totalLapsCarregadas}`;
+        dropMsg.classList.add('file-loaded');
     } catch (err) {
+        console.error(err);
         dropMsg.innerHTML = "❌ Erro na sincronização";
     }
 }
