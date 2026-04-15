@@ -2,11 +2,10 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Agility + Tarddian</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wilderness Agility Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
-
         :root {
             --bg: #1e1e2e;
             --surface: #181825;
@@ -21,6 +20,7 @@
             --yellow: #f9e2af;
             --red: #f38ba8;
             --mauve: #cba6f7;
+            --peach: #fab387;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,46 +29,98 @@
             background-color: var(--bg);
             color: var(--text);
             font-family: 'Syne', sans-serif;
-            padding: 30px 20px;
+            padding: 20px;
             display: flex;
             justify-content: center;
             min-height: 100vh;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .container {
             background-color: var(--surface);
-            padding: 32px;
+            padding: 24px;
             border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-            max-width: 860px;
+            max-width: 1200px;
             width: 100%;
-            height: fit-content;
         }
 
         h1 {
             color: var(--blue);
-            font-size: 1.6rem;
+            font-size: 1.4rem;
             font-weight: 800;
             letter-spacing: -0.5px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
-        h1 span {
-            color: var(--teal);
+        .alert {
+            background: rgba(243, 139, 168, 0.1);
+            border: 1px solid var(--red);
+            color: var(--red);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.85rem;
+            display: none;
         }
 
-        /* --- Log Input --- */
-        .log-label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--subtext);
+        .alert.show { display: block; }
+
+        .input-section {
+            margin-bottom: 16px;
+            border: 1px solid var(--muted);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            cursor: pointer;
+            background-color: var(--overlay);
+            user-select: none;
+        }
+
+        .section-header:hover { background-color: var(--muted); }
+        
+        .section-header h2 {
+            color: var(--blue);
+            font-size: 0.85rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 8px;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chevron {
+            color: var(--subtext);
+            font-size: 0.85rem;
+            transition: transform 0.3s ease;
+        }
+
+        .section-body {
+            padding: 16px;
+            overflow: hidden;
+            max-height: 600px;
+            transition: all 0.4s ease;
+            opacity: 1;
+        }
+
+        .section-body.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
         }
 
         textarea {
@@ -78,12 +130,10 @@
             padding: 12px;
             border-radius: 8px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.78rem;
+            font-size: 16px;
             resize: vertical;
-            height: 110px;
+            height: 150px;
             width: 100%;
-            margin-bottom: 24px;
-            transition: border-color 0.2s;
             line-height: 1.5;
         }
 
@@ -92,62 +142,56 @@
             border-color: var(--blue);
         }
 
-        /* --- Collapsible Config --- */
-        .config-section {
-            margin-bottom: 20px;
+        .drop-bar {
+            background-color: var(--surface2);
             border: 1px solid var(--muted);
-            border-radius: 10px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .config-header {
+            border-top: none;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            padding: 8px 12px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 16px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            background: none;
+            border: 1px solid var(--muted);
+            color: var(--text);
+            padding: 4px 10px;
+            font-size: 0.7rem;
+            border-radius: 4px;
             cursor: pointer;
-            background-color: var(--overlay);
-            user-select: none;
-            transition: background-color 0.2s;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s;
         }
 
-        .config-header:hover {
-            background-color: var(--muted);
-        }
-
-        .config-header h2 {
+        .btn-small:hover {
+            background: var(--overlay);
             color: var(--blue);
-            font-size: 0.9rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            border-color: var(--blue);
         }
 
-        .chevron {
-            color: var(--subtext);
-            font-size: 0.85rem;
-            transition: transform 0.3s ease;
+        .btn-small.sync {
+            border-color: var(--green);
+            color: var(--green);
         }
 
-        .config-body {
-            padding: 16px;
-            overflow: hidden;
-            max-height: 300px;
-            transition: max-height 0.4s ease, padding 0.3s ease, opacity 0.3s ease;
-            opacity: 1;
-        }
-
-        .config-body.collapsed {
-            max-height: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-            opacity: 0;
+        .btn-small.sync:hover {
+            background: rgba(166, 227, 161, 0.1);
         }
 
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 12px;
         }
 
@@ -160,430 +204,568 @@
             margin-bottom: 5px;
             font-weight: 600;
             color: var(--subtext);
-            font-size: 0.78rem;
+            font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
         }
 
-        input {
+        .tooltip-icon {
+            color: var(--muted);
+            cursor: help;
+            position: relative;
+        }
+
+        .tooltip-icon:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            background: var(--surface2);
+            border: 1px solid var(--muted);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            color: var(--text);
+            white-space: nowrap;
+            z-index: 1000;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        input, select {
             background-color: var(--surface2);
             border: 1px solid var(--muted);
             color: var(--text);
-            padding: 9px 12px;
+            padding: 10px 12px;
             border-radius: 6px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            transition: border-color 0.2s;
+            font-size: 16px;
+            width: 100%;
         }
 
-        input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: var(--blue);
         }
 
-        /* --- Button --- */
-        button {
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .btn-primary {
             background-color: var(--green);
             color: #11111b;
             border: none;
             padding: 14px 20px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 700;
             font-family: 'Syne', sans-serif;
             border-radius: 8px;
             cursor: pointer;
-            width: 100%;
-            letter-spacing: 0.5px;
-            transition: background-color 0.2s, transform 0.1s;
+            transition: all 0.2s;
         }
 
-        button:hover { background-color: var(--teal); }
-        button:active { transform: scale(0.99); }
+        .btn-primary:hover {
+            background-color: var(--teal);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(166, 227, 161, 0.3);
+        }
 
-        /* --- Output State Boxes --- */
-        #resultOutput {
-            margin-top: 24px;
+        .btn-secondary {
+            background-color: var(--overlay);
+            color: var(--text);
+            border: 1px solid var(--muted);
+            padding: 10px 16px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 16px;
             display: none;
-            animation: fadeIn 0.4s ease;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        .dashboard {
+            display: none;
+            animation: fadeIn 0.5s ease;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .result-grid {
+        .dashboard-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
         }
 
-        .result-col {
+        .card {
+            background-color: var(--surface2);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--muted);
             display: flex;
             flex-direction: column;
-            gap: 14px;
         }
 
-        .state-box {
-            background-color: var(--surface2);
-            border-radius: 10px;
-            padding: 18px;
-            border: 1px solid var(--muted);
-            flex: 1;
-        }
-
-        .state-box-title {
+        .card-title {
             font-size: 0.7rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1.5px;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
             padding-bottom: 10px;
             border-bottom: 1px solid var(--muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .state-box-title.blue  { color: var(--blue); border-color: var(--blue); }
-        .state-box-title.green { color: var(--green); border-color: var(--green); }
-        .state-box-title.mauve { color: var(--mauve); border-color: var(--mauve); }
-        .state-box-title.teal  { color: var(--teal); border-color: var(--teal); }
+        .card-title.blue  { color: var(--blue); border-color: var(--blue); }
+        .card-title.green { color: var(--green); border-color: var(--green); }
+        .card-title.red   { color: var(--red); border-color: var(--red); }
+        .card-title.mauve { color: var(--mauve); border-color: var(--mauve); }
+        .card-title.teal  { color: var(--teal); border-color: var(--teal); }
 
-        .stats-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; }
-        .stats-table thead th { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--subtext); text-align: right; padding: 0 0 8px 12px; border-bottom: 1px solid var(--muted); }
-        .stats-table thead th:first-child { text-align: left; padding-left: 0; }
-        .stats-table tbody td { padding: 7px 0 7px 12px; font-size: 0.84rem; font-weight: 600; text-align: right; vertical-align: baseline; border-bottom: 1px solid rgba(69,71,90,0.3); }
-        .stats-table tbody tr:last-child td { border-bottom: none; }
-        .stats-table tbody td:first-child { text-align: left; font-size: 0.78rem; font-weight: 400; color: var(--subtext); padding-left: 0; }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
 
-        .stat-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; font-family: 'JetBrains Mono', monospace; }
-        .stat-row:last-child { margin-bottom: 0; }
-        .stat-label { font-size: 0.78rem; color: var(--subtext); }
-        .stat-value { font-size: 0.88rem; font-weight: 600; color: var(--text); text-align: right; }
+        .stat-row.highlight {
+            background: rgba(137, 180, 250, 0.05);
+            margin: 0 -20px 10px;
+            padding: 10px 20px;
+            border-left: 3px solid var(--blue);
+        }
 
-        .streak-grid { display: grid; grid-template-columns: 55px 70px 75px; align-items: baseline; gap: 4px; }
-        .s-laps { text-align: right; }
-        .s-text { text-align: right; font-size: 0.80rem; } 
-        .s-time { text-align: right; white-space: nowrap; }
+        .stat-label { font-size: 0.75rem; color: var(--subtext); }
+        .stat-value { font-size: 0.9rem; font-weight: 700; }
+        .stat-value.large { font-size: 1.2rem; }
+        .stat-value.blue  { color: var(--blue); }
+        .stat-value.green { color: var(--green); }
+        .stat-value.red   { color: var(--red); }
+        .stat-value.yellow{ color: var(--yellow); }
+        .stat-value.peach { color: var(--peach); }
+        .stat-value.teal { color: var(--teal); }
 
-        .stat-value.highlight-blue  { color: var(--blue); }
-        .stat-value.highlight-green { color: var(--green); }
-        .stat-value.highlight-teal  { color: var(--teal); }
-        .stat-value.highlight-yellow{ color: var(--yellow); }
-        .stat-value.highlight-mauve { color: var(--mauve); }
-        .stat-value.highlight-red   { color: var(--red); }
+        .progress-container {
+            margin-top: 8px;
+            background: var(--overlay);
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
 
-        @media (max-width: 600px) { .result-grid, .grid { grid-template-columns: 1fr; } }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green), var(--teal));
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
 
-        /* --- Drop Zone --- */
-        .drop-zone { margin-bottom: 24px; }
-        .drop-zone textarea { margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; transition: border-color 0.2s, background-color 0.2s; }
-        .drop-zone.dragging textarea { border-color: var(--green); background-color: rgba(166,227,161,0.07); }
-        .drop-bar { background-color: var(--overlay); border: 1px solid var(--muted); border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; }
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        .chart-filter-select {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            height: auto;
+            width: auto;
+            background-color: var(--surface);
+        }
+
+        .session-list {
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            flex-grow: 1;
+        }
+
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(69,71,90,0.3);
+        }
         
-        .drop-msg { font-size: 0.78rem; color: var(--subtext); cursor: pointer; transition: color 0.2s; display: flex; align-items: center; gap: 8px;}
-        .drop-msg:hover { color: var(--blue); }
-        .drop-msg.file-loaded { color: var(--green); }
+        .session-item:last-child {
+            border-bottom: none;
+        }
 
-        .sync-btn { background: none; border: 1px solid var(--muted); color: var(--text); padding: 4px 10px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; font-family: 'JetBrains Mono', monospace; width: auto; }
-        .sync-btn:hover { background: var(--surface2); color: var(--blue); }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--surface2);
+            border: 1px solid var(--blue);
+            color: var(--blue);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 16px; }
+            .dashboard-grid[style] { grid-template-columns: 1fr !important; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--surface); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>
-        Wilderness Agility Tracker
+        <span>Wilderness Agility Tracker</span>
+        <span style="font-size:0.7rem;color:var(--subtext)">v3.0 (Auto-Sync)</span>
     </h1>
 
-    <div class="config-section" id="logSection" style="margin-bottom:20px">
-        <div class="config-header" onclick="toggleLog()">
-            <h2>Log de Drops (Nuvem)</h2>
-            <span class="chevron" id="logChevron">▼</span>
-        </div>
-        <div class="config-body" id="logBody">
-            <div id="dropZone" class="drop-zone" style="margin-bottom:0">
-                <textarea id="logInput" placeholder="Aguardando dados da nuvem... Ou cole/solte seu log offline aqui."></textarea>
+    <div id="alertBox" class="alert">
+        ⚠️ <strong>Atenção:</strong> Detectamos valores muito altos. Verifique se o formato do log está correto.
+    </div>
+
+    <div id="setupContainer">
+        <div class="input-section">
+            <div class="section-header" onclick="toggleSection('log')">
+                <h2>📋 Log de Drops</h2>
+                <span class="chevron" id="logChevron">▼</span>
+            </div>
+            <div class="section-body" id="logBody">
+                <textarea id="logInput" placeholder="Aguardando dados da nuvem... Ou cole seu log offline aqui."></textarea>
                 <div class="drop-bar">
-                    <span id="dropMsg" class="drop-msg">🔄 Preparando sincronização...</span>
-                    <div>
-                        <input type="file" id="fileInput" accept=".txt" style="display:none">
-                        <button class="sync-btn" onclick="syncFromSheets()">Forçar Sincronização</button>
-                        <button class="sync-btn" onclick="document.getElementById('fileInput').click()">Abrir TXT</button>
+                    <span style="font-size: 0.75rem; color: var(--subtext)">💡 Google Sheets Integrado</span>
+                    <div class="btn-group">
+                        <button class="btn-small sync" onclick="syncFromSheets()">🔄 Sincronizar Planilha</button>
+                        <input type="file" id="fileInput" accept=".txt" style="display:none" onchange="loadFile(this)">
+                        <button class="btn-small" onclick="document.getElementById('fileInput').click()">📁 Abrir TXT</button>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="input-section">
+            <div class="section-header" onclick="toggleSection('config')">
+                <h2>⚙️ Configurações</h2>
+                <span class="chevron" id="configChevron">▼</span>
+            </div>
+            <div class="section-body" id="configBody">
+                <div class="grid">
+                    <div class="input-group">
+                        <label>Valor de Venda (Core) <span class="tooltip-icon" data-tip="Preço atual do Core">ⓘ</span></label>
+                        <input type="text" id="valVenda" value="410m">
+                    </div>
+                    <div class="input-group">
+                        <label>Laps por Hora <span class="tooltip-icon" data-tip="Sua média de voltas/hora">ⓘ</span></label>
+                        <input type="number" id="lapsHr" value="83">
+                    </div>
+                    <div class="input-group">
+                        <label>Crystals / Hora <span class="tooltip-icon" data-tip="Farm de cristais">ⓘ</span></label>
+                        <input type="number" id="crystHr" value="2250">
+                    </div>
+                    <div class="input-group">
+                        <label>Crystals p/ 3 Comp <span class="tooltip-icon" data-tip="Média para 3 comps">ⓘ</span></label>
+                        <input type="number" id="crystPerThree" value="750">
+                    </div>
+                    <div class="input-group">
+                        <label>Comp. p/ Core <span class="tooltip-icon" data-tip="Geralmente 7">ⓘ</span></label>
+                        <input type="number" id="compNeeded" value="7">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-primary" onclick="processLog()">🚀 Gerar Análise</button>
         </div>
     </div>
 
-    <div class="config-section" id="configSection">
-        <div class="config-header" onclick="toggleConfig()">
-            <h2>Configurações de Cálculo</h2>
-            <span class="chevron" id="chevron">▼</span>
-        </div>
-        <div class="config-body" id="configBody">
-            <div class="grid">
-                <div class="input-group">
-                    <label for="valVenda">Valor de Venda (Core)</label>
-                    <input type="text" id="valVenda" value="410m" placeholder="Ex: 410m">
+    <button id="btnVoltar" class="btn-secondary" onclick="resetSetup()">← Nova Análise</button>
+
+    <div id="dashboard" class="dashboard">
+        
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-title blue">📊 Resumo Geral</div>
+                <div class="stat-row">
+                    <span class="stat-label">Total de Laps</span>
+                    <span class="stat-value blue large" id="r-laps">—</span>
                 </div>
-                <div class="input-group">
-                    <label for="lapsHr">Laps por Hora (Agility)</label>
-                    <input type="number" id="lapsHr" value="83" placeholder="Ex: 83">
+                <div class="stat-row">
+                    <span class="stat-label">Total de Shards</span>
+                    <span class="stat-value teal" id="r-shards">—</span>
                 </div>
-                <div class="input-group">
-                    <label for="crystHr">Tarddian Crystals / Hora</label>
-                    <input type="number" id="crystHr" value="2250">
+                <div class="stat-row">
+                    <span class="stat-label">Total de Portables</span>
+                    <span class="stat-value yellow" id="r-portables">—</span>
                 </div>
-                <div class="input-group">
-                    <label for="crystPerThree">Crystals p/ 3 Componentes</label>
-                    <input type="number" id="crystPerThree" value="750">
+                <div class="stat-row">
+                    <span class="stat-label">Cores Dropados</span>
+                    <span class="stat-value green large" id="r-cores">—</span>
                 </div>
-                <div class="input-group">
-                    <label for="compNeeded">Componentes p/ Core</label>
-                    <input type="number" id="compNeeded" value="7">
+                <div class="stat-row highlight" style="margin-bottom:0">
+                    <span class="stat-label">Média (Laps/Core)</span>
+                    <span class="stat-value yellow" id="r-avg-core">—</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title teal">⏱️ Tempo  </div>
+                <div class="stat-row">
+                    <span class="stat-label">Tempo Total Farmado</span>
+                    <span class="stat-value" id="r-time-real">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Média Real (Laps/Hora)</span>
+                    <span class="stat-value blue" id="r-real-laps-hr">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Tempo Total Projeto</span>
+                    <span class="stat-value blue" id="r-time-total">—</span>
+                </div>
+                <div class="stat-row highlight" style="margin-bottom:0">
+                    <span class="stat-label">Média de Horas / Dia</span>
+                    <span class="stat-value yellow" id="r-avg-hr-day">—</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title green">💰 Rentabilidade</div>
+                <div class="stat-row">
+                    <span class="stat-label">Pior Caso</span>
+                    <span class="stat-value red" id="r-gp-max">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Melhor Caso</span>
+                    <span class="stat-value green" id="r-gp-min">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Média Geral (GP/hr)</span>
+                    <span class="stat-value green large" id="r-gp-geral">—</span>
+                </div>
+                <div class="stat-row highlight" style="margin-bottom:0">
+                    <span class="stat-label">Receita Total</span>
+                    <span class="stat-value green" id="r-receita">—</span>
                 </div>
             </div>
         </div>
-    </div>
 
-    <button onclick="processLog()">Gerar Resumo Completo</button>
-
-    <div id="resultOutput">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px">
-            <div class="state-box" style="display:flex; flex-direction:column;">
-                <div class="state-box-title teal">Sessões</div>
-                <div style="display:flex; flex-direction:column; justify-content:space-between; flex:1;">
-                    <div class="stat-row" style="flex-direction:column; align-items:flex-start; gap:4px; margin-bottom:0; border-bottom:1px solid rgba(69,71,90,0.3); padding-bottom:10px;">
-                        <span class="stat-label">Sessão Mais Longa</span>
-                        <span class="stat-value highlight-blue" id="r-longest-session" style="font-size:0.84rem; font-family:'JetBrains Mono',monospace">—</span>
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-title red">🔥 Análise de Seca</div>
+                <div class="stat-row">
+                    <span class="stat-label">Seca Atual (sem drop)</span>
+                    <span class="stat-value yellow" id="r-current-dry">—</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar" id="dryProgressBar" style="width: 0%"></div>
+                </div>
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--muted);">
+                    <div class="stat-row">
+                        <span class="stat-label">Maior Seca (Recorde)</span>
+                        <span class="stat-value red" id="r-max-dry">—</span>
                     </div>
-                    <div class="stat-row" style="flex-direction:column; align-items:flex-start; gap:4px; margin-bottom:0;">
-                        <span class="stat-label">Média de Horas / Dia</span>
-                        <span class="stat-value highlight-green" id="r-avg-day" style="font-size:0.84rem; font-family:'JetBrains Mono',monospace">—</span>
+                    <div class="stat-row">
+                        <span class="stat-label">Menor Seca</span>
+                        <span class="stat-value green" id="r-min-dry">—</span>
                     </div>
                 </div>
             </div>
 
-            <div class="state-box" style="display:flex; flex-direction:column; height:100%;">
-                <div class="state-box-title teal">Horas por Dia</div>
-                <div id="r-per-day-list"
-                     style="display:flex; flex-direction:column; gap:7px; flex:1 1 0; min-height:0; overflow-y:auto; font-family:'JetBrains Mono',monospace; padding-right:4px; scrollbar-width:thin; scrollbar-color:var(--muted) transparent">
+            <div class="card">
+                <div class="card-title mauve">🎲 Análise Estatística</div>
+                <div class="stat-row">
+                    <span class="stat-label">Chance de continuar sem drop</span>
+                    <span class="stat-value peach" id="rng-prob">—</span>
                 </div>
+                <div class="stat-row">
+                    <span class="stat-label">Previsão Próximo Core</span>
+                    <span class="stat-value blue" id="rng-eta">—</span>
+                </div>
+                <div style="margin-top: auto; padding: 10px; background: rgba(203, 166, 247, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--subtext);">
+                    💡 Baseado na distribuição de Poisson
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title blue">📅 Histórico Diário (Últimos 4 dias)</div>
+                <div id="r-per-day-list" class="session-list"></div>
             </div>
         </div>
 
-        <div class="result-grid">
-            <div class="result-col">
-                <div class="state-box">
-                    <div class="state-box-title blue">Soma & Média Global</div>
-                    <table class="stats-table">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th style="color:var(--blue)">Soma</th>
-                                <th style="color:var(--green)">Média</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Laps</td>
-                                <td class="highlight-blue" id="r-laps">—</td>
-                                <td style="color:var(--subtext); font-size:0.72rem">—</td>
-                            </tr>
-                            <tr>
-                                <td>Cores</td>
-                                <td class="highlight-green" id="r-cores">—</td>
-                                <td class="highlight-green" id="r-avg-core" style="font-size:0.75rem">—</td>
-                            </tr>                           
-                            <tr>
-                                <td>Portables</td>
-                                <td class="highlight-yellow" id="r-portables">—</td>
-                                <td class="highlight-yellow" id="r-avg-portable" style="font-size:0.75rem">—</td>
-                            </tr>
-							<tr>
-                                <td>Shards</td>
-                                <td class="highlight-teal" id="r-shards">—</td>
-                                <td class="highlight-teal" id="r-avg-shard" style="font-size:0.75rem">—</td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="card">
+                <div class="card-title teal">
+                    <span>📈 Evolução das Secas</span>
+                    <select id="filterDry" class="chart-filter-select" onchange="updateCharts()">
+                        <option value="total">Total</option>
+                        <option value="month">Último Mês</option>
+                        <option value="week">Última Semana</option>
+                    </select>
                 </div>
-
-                <div class="state-box flex-fill">
-                    <div class="state-box-title teal">Rastreio de Seca (Cores)</div>
-                    <div class="stat-row">
-                        <span class="stat-label">Maior Seca (Max)</span>
-                        <span class="stat-value highlight-red" id="r-max-dry">—</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Menor Intervalo</span>
-                        <span class="stat-value highlight-green" id="r-min-dry">—</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Último Drop</span>
-                        <span class="stat-value highlight-blue" id="r-last-drop">—</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Desde o Último</span>
-                        <span class="stat-value highlight-yellow" id="r-current-dry">—</span>
-                    </div>
-                    <div class="stat-row" style="margin-top: -6px;">
-                        <span class="stat-label"></span>
-                        <span class="stat-value highlight-yellow" id="r-current-dry-gp">—</span>
-                    </div>
+                <div class="chart-container">
+                    <canvas id="dryChart"></canvas>
                 </div>
             </div>
-
-            <div class="result-col">
-                <div class="state-box">
-                    <div class="state-box-title mauve">Análise GP / hr</div>
-                    <div class="stat-row">
-                        <span class="stat-label">Tempo em Agility</span>
-                        <span class="stat-value" id="r-time-agil">—</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Tempo nos Metamorfo</span>
-                        <span class="stat-value" id="r-time-cryst">—</span>
-                    </div>                    
-					<div class="stat-row">
-                        <span class="stat-label">Comp. Seren por hr</span>
-                        <span class="stat-value" id="r-comp-hr">—</span>
-                    </div>
-					<div class="stat-row">
-                        <span class="stat-label highlight-blue" style="color:var(--blue)">TEMPO TOTAL</span>
-                        <span class="stat-value highlight-blue" id="r-time-total">—</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Valor por Core</span>
-                        <span class="stat-value highlight-green" id="r-val-unit">—</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">Receita Bruta</span>
-                        <span class="stat-value highlight-yellow" id="r-receita">—</span>
-                    </div>
+            <div class="card">
+                <div class="card-title mauve">
+                    <span>📊 GP/hr por Drop</span>
+                    <select id="filterGp" class="chart-filter-select" onchange="updateCharts()">
+                        <option value="total">Total</option>
+                        <option value="month">Último Mês</option>
+                        <option value="week">Última Semana</option>
+                    </select>
                 </div>
-
-                <div class="state-box flex-fill">
-                    <div class="state-box-title green">Lucro Estimado (Por Core)</div>
-                    <div class="stat-row">
-                        <span class="stat-label">Na Pior Seca (Max)</span>
-                        <span class="stat-value highlight-red" id="r-gp-max">—</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">No Menor Intervalo</span>
-                        <span class="stat-value highlight-green" id="r-gp-min">—</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">No Último Drop</span>
-                        <span class="stat-value highlight-blue" id="r-gp-last">—</span>
-                    </div>
-                    
-                    <div class="stat-row" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--muted);">
-                        <span class="stat-label highlight-yellow" style="font-weight: 700;">MÉDIA GERAL</span>
-                        <span class="stat-value highlight-yellow" style="font-size: 1.15rem;" id="r-gp-geral">—</span>
-                    </div>
+                <div class="chart-container">
+                    <canvas id="gpChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-    // ==========================================
-    // CONFIGURAÇÃO DO GOOGLE SHEETS AQUI 👇
-    // ==========================================
+    // URL do seu Google Sheets Apps Script
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec";
 
-    let configOpen = true;
-    let logOpen = true;
+    // Adicionado (?::\d{2})? para capturar tanto datas com segundos quanto sem
+    const LOG_REGEX = /\[(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}(?::\d{2})?)\]\s*Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)\s*\|\s*Tempo:\s*(\d+)h\s*(\d+)m/i;
+    
+    let charts = {};
+    let globalDryData = [];
+    let globalGpData = [];
+    let logLatestDate = null;
 
-    // --- Sincronização Google Sheets ---
+    // Função que puxa do Sheets Automaticamente
     async function syncFromSheets() {
-    const dropMsg = document.getElementById('dropMsg');
-    const logInput = document.getElementById('logInput');
+        showToast('⏳ Sincronizando com a Planilha...');
+        try {
+            const response = await fetch(URL_APPS_SCRIPT);
+            const rows = await response.json();
 
-    if (!URL_APPS_SCRIPT) return;
+            const logText = rows.map(row => {
+                if (row[1] === undefined || row[1] === null || row[1] === "") return "";
+                
+                let dataRaw = String(row[0]).trim();
+                
+                // Formatação da data vinda do Google Sheets
+                if (dataRaw.includes('GMT')) {
+                    const d = new Date(dataRaw);
+                    dataRaw = d.getFullYear() + "-" + 
+                              String(d.getMonth() + 1).padStart(2, '0') + "-" + 
+                              String(d.getDate()).padStart(2, '0') + " " +
+                              String(d.getHours()).padStart(2, '0') + ":" +
+                              String(d.getMinutes()).padStart(2, '0') + ":00";
+                }
 
-    try {
-        const response = await fetch(URL_APPS_SCRIPT);
-        const rows = await response.json();
+                return `[${dataRaw}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
+            }).filter(line => line !== "").join('\n');
 
-        const logText = rows.map(row => {
-            // Se a linha não tiver dados na coluna de Laps, ignora
-            if (row[1] === undefined || row[1] === null || row[1] === "") return "";
+            const logInput = document.getElementById('logInput');
+            logInput.value = logText;
             
-            // Forçamos tudo a virar texto puro para evitar que o JS mude datas
-            let dataRaw = String(row[0]).trim();
-            
-            // Se o Google mandou uma data completa tipo "Sat Mar 21...", 
-            // tentamos extrair apenas a parte que nos interessa ou usamos como está
-            if (dataRaw.includes('GMT')) {
-                // Tenta converter data longa para o padrão YYYY-MM-DD
-                const d = new Date(dataRaw);
-                dataRaw = d.getFullYear() + "-" + 
-                          String(d.getMonth() + 1).padStart(2, '0') + "-" + 
-                          String(d.getDate()).padStart(2, '0') + " " +
-                          String(d.getHours()).padStart(2, '0') + ":" +
-                          String(d.getMinutes()).padStart(2, '0');
+            if(logText.trim().length > 0) {
+                processLog();
+                const t = document.getElementById('toast');
+                t.style.borderColor = 'var(--green)';
+                t.style.color = 'var(--green)';
+                showToast(`✅ Planilha sincronizada com sucesso!`);
+            } else {
+                showToast(`A planilha está vazia.`);
             }
-
-            // Montamos a string exatamente como o seu log original
-            return `[${dataRaw}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
-        }).filter(line => line !== "").join('\n');
-
-        logInput.value = logText;
-        processLog(); 
-
-        // Mostra o total de laps processadas para você conferir na hora
-        const totalLapsCarregadas = document.getElementById('r-laps').textContent;
-        dropMsg.innerHTML = `✅ Sincronizado! Total Laps: ${totalLapsCarregadas}`;
-        dropMsg.classList.add('file-loaded');
-    } catch (err) {
-        console.error(err);
-        dropMsg.innerHTML = "❌ Erro na sincronização";
+        } catch (err) {
+            console.error(err);
+            const t = document.getElementById('toast');
+            t.style.borderColor = 'var(--red)';
+            t.style.color = 'var(--red)';
+            showToast("❌ Erro ao conectar na Planilha.");
+        }
     }
-}
 
-    // Tenta sincronizar automaticamente quando a página carrega
+    // Auto-executa no load da página
     window.addEventListener('load', syncFromSheets);
 
-    // --- Funções de UI e Cálculo ---
-    function toggleConfig() {
-        configOpen = !configOpen;
-        const body = document.getElementById('configBody');
-        const chevron = document.getElementById('chevron');
-        body.classList.toggle('collapsed', !configOpen);
-        chevron.style.transform = configOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+    function toggleSection(section) {
+        const body = document.getElementById(section + 'Body');
+        const chevron = document.getElementById(section + 'Chevron');
+        const isCollapsed = body.classList.contains('collapsed');
+        
+        if (isCollapsed) {
+            body.classList.remove('collapsed');
+            chevron.style.transform = 'rotate(0deg)';
+        } else {
+            body.classList.add('collapsed');
+            chevron.style.transform = 'rotate(-90deg)';
+        }
     }
 
-    function toggleLog() {
-        logOpen = !logOpen;
-        const body = document.getElementById('logBody');
-        const chevron = document.getElementById('logChevron');
-        body.classList.toggle('collapsed', !logOpen);
-        chevron.style.transform = logOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+    function showToast(message) {
+        const t = document.getElementById('toast');
+        t.textContent = message;
+        t.classList.add('show');
+        setTimeout(() => {
+            t.classList.remove('show');
+            // Reseta a cor pro padrão azulzinho dps de fechar
+            setTimeout(() => { t.style.borderColor = 'var(--blue)'; t.style.color = 'var(--blue)'; }, 300);
+        }, 3000);
     }
 
-    function parseDateFromLine(line) {
-        let m = line.match(/(\d{4})-(\d{2})-(\d{2})/);
-        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-        m = line.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-        if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-        m = line.match(/(\d{2})-(\d{2})-(\d{4})/);
-        if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-        return null;
+    function loadFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('logInput').value = e.target.result;
+            showToast('Arquivo carregado localmente!');
+        };
+        reader.readAsText(file);
     }
 
-    function formatHours(horas) {
-        const h = Math.floor(horas);
-        const m = Math.round((horas - h) * 60);
-        if (h > 0 && m > 0) return `${h}h ${m}m`;
-        if (h > 0) return `${h}h`;
-        return `${m}m`;
-    }
-
-    function friendlyDate(iso) {
-        const [y, mo, d] = iso.split('-');
-        return `${d}/${mo}/${y}`;
+    function parseInputGP(input) {
+        if (!input) return 0;
+        let str = input.toLowerCase().trim().replace(',', '.');
+        let mult = 1;
+        if (str.endsWith('k')) { mult = 1000; str = str.slice(0, -1); }
+        else if (str.endsWith('m')) { mult = 1000000; str = str.slice(0, -1); }
+        else if (str.endsWith('b')) { mult = 1000000000; str = str.slice(0, -1); }
+        const val = parseFloat(str);
+        return isNaN(val) ? 0 : val * mult;
     }
 
     function formatGP(num) {
@@ -593,205 +775,282 @@
         return Math.floor(num).toString();
     }
 
-    function parseInputGP(input) {
-        if (!input) return 0;
-        let str = input.toLowerCase().trim().replace(',', '.');
-        let multiplier = 1;
-        if (str.endsWith('k')) { multiplier = 1000; str = str.slice(0, -1); }
-        else if (str.endsWith('m')) { multiplier = 1000000; str = str.slice(0, -1); }
-        else if (str.endsWith('b')) { multiplier = 1000000000; str = str.slice(0, -1); }
-        let val = parseFloat(str);
-        return isNaN(val) ? 0 : val * multiplier;
+    function formatHours(h) {
+        const hrs = Math.floor(h);
+        const mins = Math.round((h - hrs) * 60);
+        if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`;
+        if (hrs > 0) return `${hrs}h`;
+        return `${mins}m`;
     }
 
-    function set(id, val) { document.getElementById(id).textContent = val; }
-    function setHTML(id, val) { document.getElementById(id).innerHTML = val; }
-
-    function formatLapsTime(laps, lapsHr) {
-        if (laps === 0) {
-            return `<div class="streak-grid"><span class="s-laps">0</span><span class="s-text">voltas ou</span><span class="s-time">0m</span></div>`;
-        }
-        let hrs = Math.floor(laps / lapsHr);
-        let mins = Math.round((laps / lapsHr - hrs) * 60);
-        if (mins === 60) { hrs += 1; mins = 0; }
-        let timeStr = hrs > 0 ? (mins > 0 ? `${hrs}:${mins.toString().padStart(2, '0')}h` : `${hrs}h`) : `${mins}m`;
-
-        return `<div class="streak-grid"><span class="s-laps">${laps.toLocaleString()}</span><span class="s-text">voltas ou</span><span class="s-time">${timeStr}</span></div>`;
+    function resetSetup() {
+        document.getElementById('setupContainer').style.display = 'block';
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('btnVoltar').style.display = 'none';
     }
 
     function processLog() {
-        const logText = document.getElementById('logInput').value;
+        const log = document.getElementById('logInput').value;
+        if (!log.trim()) {
+            showToast('Nenhum log encontrado para processar.');
+            return;
+        }
+
         const valVenda = parseInputGP(document.getElementById('valVenda').value);
-        const lapsHr = parseFloat(document.getElementById('lapsHr').value) || 1;
-        const crystHr = parseFloat(document.getElementById('crystHr').value) || 1;
-        const crystPerThree = parseFloat(document.getElementById('crystPerThree').value) || 1;
-        const compNeeded = parseFloat(document.getElementById('compNeeded').value) || 0;
+        const lapsHr = parseFloat(document.getElementById('lapsHr').value) || 83;
+        const crystHr = parseFloat(document.getElementById('crystHr').value) || 2250;
+        const crystPerThree = parseFloat(document.getElementById('crystPerThree').value) || 750;
+        const compNeeded = parseFloat(document.getElementById('compNeeded').value) || 7;
 
-        let totalLaps = 0, totalCores = 0, totalPortables = 0, totalShards = 0;
-        let currentDry = 0, maxDry = 0, minDry = Infinity, lastDropLaps = 0;
-        let foundCore = false;
+        let totalLaps = 0, totalCores = 0, totalMinutes = 0;
+        let totalShards = 0, totalPortables = 0;
+        let currentDry = 0, maxDry = 0, minDry = Infinity;
+        
+        globalDryData = [];
+        globalGpData = [];
+        logLatestDate = null;
+        
+        const perDay = {};
+        const lines = log.split('\n');
+        let validLines = 0;
 
-        let longestSessionLaps = 0;
-        let currentDate = null;
-        const perDay = {}; 
-        let sessionIndex = 0; 
-
-        const lines = logText.split('\n');
-        const regex = /Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)/i;
-
-        for (const line of lines) {
-            if (line.includes('[SOMA]')) continue;
-
-            const detectedDate = parseDateFromLine(line);
-            if (detectedDate) currentDate = detectedDate;
-
-            const match = line.match(regex);
+        lines.forEach(line => {
+            const match = line.match(LOG_REGEX);
             if (match) {
-                let laps = parseInt(match[1], 10);
-                let cores = parseInt(match[2], 10);
+                validLines++;
+                const laps = parseInt(match[2], 10);
+                const cores = parseInt(match[3], 10);
+                const shards = parseInt(match[4], 10);
+                const portables = parseInt(match[5], 10);
+                const hours = parseInt(match[6], 10);
+                const mins = parseInt(match[7], 10);
+                const dateStr = match[1]; 
+                const dayStr = dateStr.split(' ')[0]; 
                 
-                totalLaps += laps;
-                totalCores += cores;                
-                totalShards += parseInt(match[3], 10);
-                totalPortables += parseInt(match[4], 10);
-
-                currentDry += laps;
-                if (cores > 0) {
-                    foundCore = true;
-                    let effectiveDry = Math.floor(currentDry / cores);
-                    if (effectiveDry > maxDry) maxDry = effectiveDry;
-                    if (effectiveDry < minDry) minDry = effectiveDry;
-                    lastDropLaps = effectiveDry; 
-                    currentDry = 0; 
+                const currentDate = new Date(dateStr);
+                if (!logLatestDate || currentDate > logLatestDate) {
+                    logLatestDate = currentDate;
                 }
 
-                if (laps > longestSessionLaps) longestSessionLaps = laps;
-                const dayKey = currentDate || `session_${Math.floor(sessionIndex / 1) + 1}`;
-                perDay[dayKey] = (perDay[dayKey] || 0) + laps;
-                sessionIndex++;
+                totalLaps += laps;
+                totalCores += cores;
+                totalShards += shards;
+                totalPortables += portables;
+                totalMinutes += (hours * 60) + mins;
+
+                // Análise de seca
+                currentDry += laps;
+                if (cores > 0) {
+                    const dryStreak = currentDry;
+                    
+                    if (dryStreak > maxDry) maxDry = dryStreak;
+                    if (dryStreak < minDry) minDry = dryStreak;
+
+                    const compHr = (crystHr / crystPerThree) * 3;
+                    const tempoAgil = dryStreak / lapsHr;
+                    const tempoCryst = compNeeded / compHr;
+                    const gpHr = valVenda / (tempoAgil + tempoCryst);
+                    
+                    globalDryData.push({ laps: dryStreak, date: currentDate });
+                    globalGpData.push({ gpHr: gpHr, date: currentDate });
+
+                    currentDry = 0;
+                }
+
+                perDay[dayStr] = (perDay[dayStr] || 0) + laps;
+            }
+        });
+
+        if (validLines === 0) return;
+
+        if (totalLaps > 100000 || totalCores > 1000) {
+            document.getElementById('alertBox').classList.add('show');
+            document.getElementById('alertBox').innerHTML = `
+                ⚠️ <strong>Valores suspeitos:</strong> ${totalLaps.toLocaleString()} laps / ${totalCores} cores.<br>
+                Verifique se o log está no formato correto.
+            `;
+            return;
+        } else {
+            document.getElementById('alertBox').classList.remove('show');
+        }
+
+        // --- Cálculos ---
+        const avgCore = totalCores > 0 ? Math.round(totalLaps / totalCores) : 0;
+        const realLapsPerHour = totalMinutes > 0 ? (totalLaps / (totalMinutes / 60)) : 0;
+        
+        const uniqueDaysCount = Object.keys(perDay).length;
+        const avgHoursPerDay = uniqueDaysCount > 0 ? (totalMinutes / 60) / uniqueDaysCount : 0;
+        
+        const compHr = (crystHr / crystPerThree) * 3;
+        const tempoCryst = totalCores > 0 ? (totalCores * compNeeded) / compHr : 0;
+        const tempoTotalHoras = (totalMinutes / 60) + tempoCryst;
+        const receita = totalCores * valVenda;
+        const gpPorHora = tempoTotalHoras > 0 ? receita / tempoTotalHoras : 0;
+
+        // --- Atualizar UI ---
+        document.getElementById('r-laps').textContent = totalLaps.toLocaleString();
+        document.getElementById('r-shards').textContent = totalShards.toLocaleString();
+        document.getElementById('r-portables').textContent = totalPortables.toLocaleString();
+        document.getElementById('r-cores').textContent = totalCores.toLocaleString();
+        document.getElementById('r-avg-core').textContent = avgCore > 0 ? `~1/${avgCore}` : 'N/A';
+        
+        document.getElementById('r-receita').textContent = formatGP(receita);
+        
+        document.getElementById('r-time-real').textContent = formatHours(totalMinutes / 60);
+        document.getElementById('r-real-laps-hr').textContent = realLapsPerHour.toFixed(1) + ' laps/hr';
+        document.getElementById('r-avg-hr-day').textContent = formatHours(avgHoursPerDay) + '/dia';
+        document.getElementById('r-time-total').textContent = formatHours(tempoTotalHoras);
+        
+        document.getElementById('r-gp-geral').textContent = formatGP(gpPorHora) + '/hr';
+
+        const calcGp = (laps) => {
+            if (!laps) return 0;
+            return valVenda / ((laps / lapsHr) + (compNeeded / compHr));
+        };
+        
+        document.getElementById('r-gp-max').textContent = maxDry ? formatGP(calcGp(maxDry)) + '/hr' : 'N/A';
+        document.getElementById('r-gp-min').textContent = minDry !== Infinity ? formatGP(calcGp(minDry)) + '/hr' : 'N/A';
+
+        document.getElementById('r-current-dry').textContent = `${currentDry} laps (${formatHours(currentDry/lapsHr)})`;
+        document.getElementById('r-max-dry').textContent = maxDry ? `${maxDry} laps` : 'N/A';
+        document.getElementById('r-min-dry').textContent = minDry !== Infinity ? `${minDry} laps` : 'N/A';
+
+        const dryPct = maxDry ? (currentDry / maxDry) * 100 : 0;
+        document.getElementById('dryProgressBar').style.width = Math.min(dryPct, 100) + '%';
+
+        const prob = avgCore ? Math.exp(-(currentDry / avgCore)) : 0;
+        document.getElementById('rng-prob').textContent = (prob * 100).toFixed(2) + '%';
+        
+        let eta = 'N/A';
+        if (avgCore) {
+            const remaining = Math.max(0, avgCore - currentDry);
+            eta = formatHours(remaining / lapsHr);
+        }
+        document.getElementById('rng-eta').textContent = eta;
+
+        // Lista por dia
+        const list = document.getElementById('r-per-day-list');
+        list.innerHTML = '';
+        const sortedDays = Object.keys(perDay).sort().slice(-4); 
+        sortedDays.forEach(day => {
+            const laps = perDay[day];
+            const div = document.createElement('div');
+            div.className = 'session-item';
+            
+            const dParts = day.split('-');
+            const prettyDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
+            
+            div.innerHTML = `<span>${prettyDate}</span><span style="color:var(--blue);font-weight:bold">${laps.toLocaleString()} laps</span>`;
+            list.appendChild(div);
+        });
+
+        updateCharts();
+
+        document.getElementById('setupContainer').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('btnVoltar').style.display = 'inline-block';
+    }
+
+    function filterDataByTimeframe(dataArray, timeframe) {
+        if (timeframe === 'total' || !logLatestDate) return dataArray;
+        
+        return dataArray.filter(item => {
+            const diffTime = Math.abs(logLatestDate - item.date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (timeframe === 'week') return diffDays <= 7;
+            if (timeframe === 'month') return diffDays <= 30;
+            return true;
+        });
+    }
+
+    function updateCharts() {
+        const dryFilter = document.getElementById('filterDry').value;
+        const gpFilter = document.getElementById('filterGp').value;
+        
+        const filteredDry = filterDataByTimeframe(globalDryData, dryFilter);
+        const filteredGp = filterDataByTimeframe(globalGpData, gpFilter);
+        
+        renderCharts(filteredDry, filteredGp);
+    }
+
+    function renderCharts(dryData, gpData) {
+        if (charts.dry) charts.dry.destroy();
+        if (charts.gp) charts.gp.destroy();
+
+        charts.dry = new Chart(document.getElementById('dryChart'), {
+            type: 'line',
+            data: {
+                labels: dryData.map((_, i) => `#${i+1}`),
+                datasets: [{
+                    label: 'Laps até o drop',
+                    data: dryData.map(d => d.laps),
+                    borderColor: '#f38ba8',
+                    backgroundColor: 'rgba(243, 139, 168, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        grid: { color: 'rgba(69, 71, 90, 0.3)' }, 
+                        ticks: { color: '#bac2de', font: { family: 'JetBrains Mono' } }
+                    },
+                    x: { 
+                        grid: { display: false }, 
+                        ticks: { display: false }
+                    }
+                }
+            }
+        });
+
+        charts.gp = new Chart(document.getElementById('gpChart'), {
+            type: 'line',
+            data: {
+                labels: gpData.map((_, i) => `#${i+1}`),
+                datasets: [{
+                    data: gpData.map(d => d.gpHr),
+                    borderColor: '#cba6f7',
+                    backgroundColor: 'rgba(203, 166, 247, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        grid: { color: 'rgba(69, 71, 90, 0.3)' }, 
+                        ticks: { 
+                            color: '#bac2de',
+                            callback: v => formatGP(v) + '/h'
+                        }
+                    },
+                    x: { 
+                        grid: { display: false }, 
+                        ticks: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'Enter') {
+            if(document.getElementById('setupContainer').style.display !== 'none') {
+                processLog();
             }
         }
-
-        if (totalLaps === 0) return;
-
-        const avgCore = totalCores > 0 ? `~1/${Math.round(totalLaps / totalCores)}` : 'N/A';
-        const avgShard = totalShards > 0 ? `~1/${Math.round(totalLaps / totalShards)}` : 'N/A';
-        const avgPortable = totalPortables > 0 ? `~1/${Math.round(totalLaps / totalPortables)}` : 'N/A';
-
-        const compHr = (crystHr / crystPerThree) * 3;
-        const tempoAgilityHoras = totalLaps / lapsHr;
-        const tempoCrystalsHoras = (totalCores * compNeeded) / compHr;
-        const tempoTotalProjetoHoras = tempoAgilityHoras + tempoCrystalsHoras;
-        const receitaTotal = totalCores * valVenda;
-        const gpPorHora = tempoTotalProjetoHoras > 0 ? (receitaTotal / tempoTotalProjetoHoras) : 0;
-
-        const tempoCryst1Core = compNeeded > 0 ? (compNeeded / compHr) : 0;
-        
-        const calcStreakGpHr = (lapsDaSeca) => {
-            if (lapsDaSeca === 0 || valVenda === 0) return 'N/A';
-            const tempoAgilCore = lapsDaSeca / lapsHr;
-            const tempoTotalEsseCore = tempoAgilCore + tempoCryst1Core;
-            return formatGP(valVenda / tempoTotalEsseCore) + '/hr';
-        };
-
-        const calcStreakGpHrShort = (lapsDaSeca) => {
-            if (lapsDaSeca === 0 || valVenda === 0) return 'N/A';
-            const tempoAgilCore = lapsDaSeca / lapsHr;
-            const tempoTotalEsseCore = tempoAgilCore + tempoCryst1Core;
-            let val = valVenda / tempoTotalEsseCore;
-            
-            if (val >= 1000000000) return Math.floor(val / 1000000000) + 'b/h';
-            if (val >= 1000000) return Math.floor(val / 1000000) + 'm/h';
-            if (val >= 1000) return Math.floor(val / 1000) + 'k/h';
-            return Math.floor(val).toString() + '/h';
-        };
-
-        set('r-laps', totalLaps.toLocaleString());
-        set('r-cores', totalCores.toLocaleString());        
-        set('r-portables', totalPortables.toLocaleString());
-		set('r-shards', totalShards.toLocaleString());
-		
-        set('r-avg-core', avgCore);        
-        set('r-avg-portable', avgPortable);
-		set('r-avg-shard', avgShard);
-		
-        set('r-comp-hr', compHr.toFixed(2) + ' ');
-        set('r-time-agil', tempoAgilityHoras.toFixed(2) + 'h');
-        set('r-time-cryst', tempoCrystalsHoras.toFixed(2) + 'h');
-        set('r-time-total', tempoTotalProjetoHoras.toFixed(2) + 'h');
-        set('r-val-unit', formatGP(valVenda));
-        set('r-receita', formatGP(receitaTotal));
-
-        if (!foundCore) minDry = 0;
-        
-        setHTML('r-max-dry', maxDry > 0 ? formatLapsTime(maxDry, lapsHr) : 'N/A');
-        setHTML('r-min-dry', foundCore ? formatLapsTime(minDry, lapsHr) : 'N/A');
-        setHTML('r-last-drop', foundCore ? formatLapsTime(lastDropLaps, lapsHr) : 'N/A');
-        setHTML('r-current-dry', formatLapsTime(currentDry, lapsHr));
-        
-        let currentGpStr = currentDry > 0 ? calcStreakGpHrShort(currentDry) : 'N/A';
-        setHTML('r-current-dry-gp', `<div class="streak-grid"><span class="s-laps"></span><span class="s-text">ou</span><span class="s-time">${currentGpStr}</span></div>`);
-
-        set('r-gp-max', maxDry > 0 ? calcStreakGpHr(maxDry) : 'N/A');
-        set('r-gp-min', foundCore ? calcStreakGpHr(minDry) : 'N/A');
-        set('r-gp-last', foundCore ? calcStreakGpHr(lastDropLaps) : 'N/A');
-        set('r-gp-geral', gpPorHora > 0 ? formatGP(gpPorHora) + '/hr' : '0/hr');
-
-        const hasDates = Object.keys(perDay).some(k => !k.startsWith('session_'));
-        const dayKeys = Object.keys(perDay).sort();
-        const numDays = dayKeys.length;
-
-        const longestH = longestSessionLaps / lapsHr;
-        set('r-longest-session', longestSessionLaps > 0 ? `${longestSessionLaps.toLocaleString()} voltas · ${formatHours(longestH)}` : '—');
-
-        const listEl = document.getElementById('r-per-day-list');
-        listEl.innerHTML = '';
-        let totalDayHours = 0;
-        for (const key of dayKeys) {
-            const dayLaps = perDay[key];
-            const dayH = dayLaps / lapsHr;
-            totalDayHours += dayH;
-            const label = hasDates ? friendlyDate(key) : key.replace('session_', 'Sessão ');
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:0.82rem; border-bottom:1px solid rgba(69,71,90,0.3); padding-bottom:6px;';
-            row.innerHTML = `<span style="color:var(--subtext); white-space:nowrap">${label}</span>
-                             <span style="color:var(--text); font-weight:600; white-space:nowrap">${dayLaps.toLocaleString()} voltas&nbsp;<span style="color:var(--teal)">· ${formatHours(dayH)}</span></span>`;
-            listEl.appendChild(row);
-        }
-        if (listEl.lastChild) listEl.lastChild.style.borderBottom = 'none';
-
-        const avgDayH = numDays > 0 ? totalDayHours / numDays : 0;
-        set('r-avg-day', numDays > 0 ? `${formatHours(avgDayH)} / dia` : '—');
-
-        document.getElementById('resultOutput').style.display = 'block';
-
-        if (configOpen) toggleConfig();
-        if (logOpen) toggleLog();
-        setTimeout(() => { listEl.scrollTop = listEl.scrollHeight; }, 50);
-    }
-
-    // Fallback Offline Drag & Drop
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    
-    fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragging'); });
-    dropZone.addEventListener('dragleave', e => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('dragging'); });
-    dropZone.addEventListener('drop', e => {
-        e.preventDefault(); dropZone.classList.remove('dragging');
-        if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
     });
-
-    function loadFile(file) {
-        const reader = new FileReader();
-        reader.onload = e => {
-            document.getElementById('logInput').value = e.target.result;
-            document.getElementById('dropMsg').innerHTML = '✅ TXT Carregado: ' + file.name;
-            document.getElementById('dropMsg').classList.add('file-loaded');
-            processLog();
-        };
-        reader.readAsText(file, 'UTF-8');
-    }
 </script>
 
 </body>
