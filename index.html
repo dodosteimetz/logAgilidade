@@ -664,7 +664,10 @@
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec";
 
     // Adicionado (?::\d{2})? para capturar tanto datas com segundos quanto sem
-    const LOG_REGEX = /\\[((?:\\d{4}-\\d{2}-\\d{2}|\\d{2}\\/\\d{2}\\/\\d{4})\\s\\d{2}:\\d{2}(?::\\d{2})?)\\]\\s*Laps:\\s*(\\d+)\\s*\\|\\s*Cores:\\s*(\\d+)\\s*\\|\\s*Shards:\\s*(\\d+)\\s*\\|\\s*Portables:\\s*(\\d+)\\s*\\|\\s*Tempo:\\s*(\\d+)h\\s*(\\d+)m/i;
+    const LOG_REGEX = new RegExp(
+        "\[((?:\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4})\s\d{2}:\d{2}(?::\d{2})?)\]\s*Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)\s*\|\s*Tempo:\s*(\d+)h\s*(\d+)m",
+        "i"
+    );
     
     let charts = {};
     let globalDryData = [];
@@ -712,7 +715,7 @@
                 let dataRaw = String(row[0]).trim();
                 
                 // Formatação da data vinda do Google Sheets
-                if (dataRaw.match(/^\\d{2}\\/\\d{2}\\/\\d{4}/)) {
+                if (dataRaw.match(/^\d{2}\/\d{2}\/\d{4}/)) {
                     // Já está no formato brasileiro, mantém como está para o regex capturar
                     // O regex foi atualizado para aceitar ambos os formatos
                 } else if (dataRaw.includes('GMT')) {
@@ -722,7 +725,7 @@
 
 
                 return `[${dataRaw}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
-            }).filter(line => line !== "").join('\\n');
+            }).filter(line => line !== "").join('\n');
 
             const logInput = document.getElementById('logInput');
             logInput.value = logText;
@@ -839,7 +842,7 @@
         logLatestDate = null;
         
         const perDay = {};
-        const lines = log.split('\\n');
+        const lines = log.split('\n');
         let validLines = 0;
 
         lines.forEach(line => {
