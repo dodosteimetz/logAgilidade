@@ -541,16 +541,17 @@
 
             <div class="card">
                 <div class="card-title teal">⏱️ Tempo  </div>
-                <div class="stat-row">
-                    <span class="stat-label">Tempo na Agilidade</span>
-                    <span class="stat-value" id="r-time-real">—</span>
-                </div>
-                <div class="stat-row">
+                    <div class="stat-row">
                     <span class="stat-label">Laps/Hora</span>
                     <span class="stat-value blue" id="r-real-laps-hr">—</span>
                 </div>
                 <div class="stat-row">
-                    <span class="stat-label">Tempo Total</span>
+                    <span class="stat-label">Tempo na Agilidade</span>
+                    <span class="stat-value" id="r-time-real">—</span>
+                </div>
+            
+                <div class="stat-row">
+                    <span class="stat-label">Total com Metamorfo</span>
                     <span class="stat-value blue" id="r-time-total">—</span>
                 </div>
                 <div class="stat-row highlight" style="margin-bottom:0">
@@ -957,7 +958,7 @@
 
     document.getElementById('r-receita').textContent = formatGP(receita);
     document.getElementById('r-time-real').textContent = formatHours(totalMinutes / 60);
-    document.getElementById('r-real-laps-hr').textContent = realLapsPerHour.toFixed(1) + ' laps/hr';
+    document.getElementById('r-real-laps-hr').textContent = realLapsPerHour.toFixed(1);
     document.getElementById('r-avg-hr-day').textContent = formatHours(avgHoursPerDay) + '/dia';
     document.getElementById('r-time-total').textContent = formatHours(tempoTotalHoras);
     document.getElementById('r-gp-geral').textContent = formatGP(gpPorHora) + '/hr';
