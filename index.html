@@ -867,10 +867,17 @@
             }
             
             // Formatar dia para agrupamento
-            let dia = dateRaw.split(' ')[0];  // Pega apenas a data, ignora hora
-            if (dia.includes('/')) {
-            const p = dia.split('/');
+            let dia;
+            if (dateRaw.includes('T')) {
+    // Formato ISO: 2026-04-15T06:51:48.000Z
+             dia = dateRaw.split('T')[0];  // Pega "2026-04-15"
+            } else if (dateRaw.includes('/')) {
+    // Formato BR: 15/04/2026 06:51:48
+            const p = dateRaw.split(' ')[0].split('/');
             if(p.length === 3) dia = `${p[2]}-${p[1]}-${p[0]}`;  // Converte DD/MM/YYYY → YYYY-MM-DD
+            } else {
+    // Já está em YYYY-MM-DD
+            dia = dateRaw.split(' ')[0];
             }
             perDay[dia] = (perDay[dia] || 0) + laps;
             
