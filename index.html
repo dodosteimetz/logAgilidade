@@ -664,7 +664,8 @@
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec";
 
     // Adicionado (?::\d{2})? para capturar tanto datas com segundos quanto sem
-    const LOG_REGEX = /\[((?:\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\s\d{2}:\d{2}(?::\d{2})?)\]\s*Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)\s*\|\s*Tempo:\s*(\d+)h\s*(\d+)m/i;
+    // Regex super flexível: Pega tudo que estiver entre [ ], e caça os números não importa o espaço
+    const LOG_REGEX = /\[(.*?)\]\s*Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)\s*\|\s*Tempo:\s*(.*)/i;
     
     let charts = {};
     let globalDryData = [];
@@ -842,33 +843,48 @@
         let validLines = 0;
 
         lines.forEach(line => {
-            const match = line.match(LOG_REGEX);
-            if (match) {
-                validLines++;
-                const laps = parseInt(match[2], 10);
-                const cores = parseInt(match[3], 10);
-                const shards = parseInt(match[4], 10);
-                const portables = parseInt(match[5], 10);
-                const hours = parseInt(match[6], 10);
-                const mins = parseInt(match[7], 10);
-                const dateStr = match[1]; 
-                 
+            const m = line.match(LOG_REGEX);
+            if(m) {
+                validCount++;
                 
-                const currentDate = parseDateString(dateStr);
-                if (!logLatestDate || currentDate > logLatestDate) {
-                    logLatestDate = currentDate;
-                }
+                // Pega os valores básicos
+                const dateRaw = m[1].trim(); 
+                const laps = parseInt(m[2]) || 0;
+                const cores = parseInt(m[3]) || 0;
+                const shards = parseInt(m[4]) || 0;
+                const portables = parseInt(m[5]) || 0;
+                const tempoStr = m[6].toLowerCase();
 
+                // Extração inteligente de horas e minutos (aceita "0h 2m", "30m", "1h", etc)
+                let h = 0, min = 0;
+                const hMatch = tempoStr.match(/(\d+)h/);
+                const mMatch = tempoStr.match(/(\d+)m/);
+                if (hMatch) h = parseInt(hMatch[1]);
+                if (mMatch) min = parseInt(mMatch[1]);
+                
                 totalLaps += laps;
                 totalCores += cores;
                 totalShards += shards;
                 totalPortables += portables;
-                totalMinutes += (hours * 60) + mins;
+                totalMins += (h * 60) + min;
 
-                // Análise de seca
+                // Arruma a data para agrupar certinho
+                let dia = dateRaw.split(' ')[0];
+                if (dia.includes('/')) {
+                    // Se o Sheets mandar DD/MM/YYYY, converte pra YYYY-MM-DD pros gráficos não bugarem
+                    const p = dia.split('/');
+                    if(p.length === 3) dia = `${p[2]}-${p[1]}-${p[0]}`;
+                }
+                
+                days[dia] = (days[dia] || 0) + laps;
+
                 currentDry += laps;
-                if (cores > 0) {
-                    const dryStreak = currentDry;
+                if(cores > 0) {
+                    if(currentDry > maxDry) maxDry = currentDry;
+                    currentDry = 0;
+                }
+            }
+        });
                     
                     if (dryStreak > maxDry) maxDry = dryStreak;
                     if (dryStreak < minDry) minDry = dryStreak;
