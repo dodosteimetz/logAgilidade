@@ -664,10 +664,7 @@
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec";
 
     // Adicionado (?::\d{2})? para capturar tanto datas com segundos quanto sem
-    const LOG_REGEX = new RegExp(
-        "\[((?:\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4})\s\d{2}:\d{2}(?::\d{2})?)\]\s*Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)\s*\|\s*Tempo:\s*(\d+)h\s*(\d+)m",
-        "i"
-    );
+    const LOG_REGEX = /\[((?:\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\s\d{2}:\d{2}(?::\d{2})?)\]\s*Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)\s*\|\s*Tempo:\s*(\d+)h\s*(\d+)m/i;
     
     let charts = {};
     let globalDryData = [];
