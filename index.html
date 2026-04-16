@@ -818,184 +818,200 @@
     }
 
     function processLog() {
-        const log = document.getElementById('logInput').value;
-        if (!log.trim()) {
-            showToast('Nenhum log encontrado para processar.');
-            return;
-        }
+    const log = document.getElementById('logInput').value;
+    if (!log.trim()) {
+        showToast('Nenhum log encontrado para processar.');
+        return;
+    }
 
-        const valVenda = parseInputGP(document.getElementById('valVenda').value);
-        const lapsHr = parseFloat(document.getElementById('lapsHr').value) || 83;
-        const crystHr = parseFloat(document.getElementById('crystHr').value) || 2250;
-        const crystPerThree = parseFloat(document.getElementById('crystPerThree').value) || 750;
-        const compNeeded = parseFloat(document.getElementById('compNeeded').value) || 7;
+    const valVenda = parseInputGP(document.getElementById('valVenda').value);
+    const lapsHr = parseFloat(document.getElementById('lapsHr').value) || 83;
+    const crystHr = parseFloat(document.getElementById('crystHr').value) || 2250;
+    const crystPerThree = parseFloat(document.getElementById('crystPerThree').value) || 750;
+    const compNeeded = parseFloat(document.getElementById('compNeeded').value) || 7;
 
-        let totalLaps = 0, totalCores = 0, totalMinutes = 0;
-        let totalShards = 0, totalPortables = 0;
-        let currentDry = 0, maxDry = 0, minDry = Infinity;
-        
-        globalDryData = [];
-        globalGpData = [];
-        logLatestDate = null;
-        
-        const perDay = {};
-        const lines = log.split('\n');
-        let validLines = 0;
+    let totalLaps = 0, totalCores = 0, totalMinutes = 0;
+    let totalShards = 0, totalPortables = 0;
+    let maxDry = 0, minDry = Infinity;
+    
+    globalDryData = [];
+    globalGpData = [];
+    logLatestDate = null;
+    
+    const perDay = {};
+    const lines = log.split('\n');
+    let validLines = 0;
+    
+    // Array para armazenar todas as entradas processadas
+    const entries = [];
 
-        lines.forEach(line => {
-            const m = line.match(LOG_REGEX);
-            if(m) {
-                validCount++;
-                
-                // Pega os valores básicos
-                const dateRaw = m[1].trim(); 
-                const laps = parseInt(m[2]) || 0;
-                const cores = parseInt(m[3]) || 0;
-                const shards = parseInt(m[4]) || 0;
-                const portables = parseInt(m[5]) || 0;
-                const tempoStr = m[6].toLowerCase();
+    lines.forEach(line => {
+        const m = line.match(LOG_REGEX);
+        if(m) {
+            validLines++;
+            
+            const dateRaw = m[1].trim(); 
+            const laps = parseInt(m[2]) || 0;
+            const cores = parseInt(m[3]) || 0;
+            const shards = parseInt(m[4]) || 0;
+            const portables = parseInt(m[5]) || 0;
+            const tempoStr = m[6].toLowerCase();
 
-                // Extração inteligente de horas e minutos (aceita "0h 2m", "30m", "1h", etc)
-                let h = 0, min = 0;
-                const hMatch = tempoStr.match(/(\d+)h/);
-                const mMatch = tempoStr.match(/(\d+)m/);
-                if (hMatch) h = parseInt(hMatch[1]);
-                if (mMatch) min = parseInt(mMatch[1]);
-                
-                totalLaps += laps;
-                totalCores += cores;
-                totalShards += shards;
-                totalPortables += portables;
-                totalMins += (h * 60) + min;
+            // Extrair horas e minutos
+            let h = 0, min = 0;
+            const hMatch = tempoStr.match(/(\d+)h/);
+            const mMatch = tempoStr.match(/(\d+)m/);
+            if (hMatch) h = parseInt(hMatch[1]);
+            if (mMatch) min = parseInt(mMatch[1]);
+            
+            const entryMinutes = (h * 60) + min;
+            
+            totalLaps += laps;
+            totalCores += cores;
+            totalShards += shards;
+            totalPortables += portables;
+            totalMinutes += entryMinutes;
 
-                // Arruma a data para agrupar certinho
-                let dia = dateRaw.split(' ')[0];
-                if (dia.includes('/')) {
-                    // Se o Sheets mandar DD/MM/YYYY, converte pra YYYY-MM-DD pros gráficos não bugarem
-                    const p = dia.split('/');
-                    if(p.length === 3) dia = `${p[2]}-${p[1]}-${p[0]}`;
-                }
-                
-                days[dia] = (days[dia] || 0) + laps;
-
-                currentDry += laps;
-                if(cores > 0) {
-                    if(currentDry > maxDry) maxDry = currentDry;
-                    currentDry = 0;
-                }
+            // Processar data
+            let currentDate = parseDateString(dateRaw);
+            
+            // Atualizar data mais recente
+            if (!logLatestDate || currentDate > logLatestDate) {
+                logLatestDate = currentDate;
             }
-        });
-                    
-                    if (dryStreak > maxDry) maxDry = dryStreak;
-                    if (dryStreak < minDry) minDry = dryStreak;
-
-                    const compHr = (crystHr / crystPerThree) * 3;
-                    const tempoAgil = dryStreak / lapsHr;
-                    const tempoCryst = compNeeded / compHr;
-                    const gpHr = valVenda / (tempoAgil + tempoCryst);
-                    
-                    globalDryData.push({ laps: dryStreak, date: currentDate });
-                    globalGpData.push({ gpHr: gpHr, date: currentDate });
-
-                    currentDry = 0;
-                }
-                const dayStr = toISODateString(currentDate).split(' ')[0]; 
-                perDay[dayStr] = (perDay[dayStr] || 0) + laps;
+            
+            // Formatar dia para agrupamento
+            let dia = dateRaw.split(' ')[0];
+            if (dia.includes('/')) {
+                const p = dia.split('/');
+                if(p.length === 3) dia = `${p[2]}-${p[1]}-${p[0]}`;
             }
-        });
-
-        if (validLines === 0) {
-            showToast('Nenhuma linha válida encontrada no log. Verifique o formato.');
-            return;
+            perDay[dia] = (perDay[dia] || 0) + laps;
+            
+            // Armazenar entrada para processamento de secas
+            entries.push({
+                date: currentDate,
+                laps: laps,
+                cores: cores,
+                dia: dia
+            });
         }
+    });
 
-        if (totalLaps > 100000 || totalCores > 1000) {
-            document.getElementById('alertBox').classList.add('show');
-            document.getElementById('alertBox').innerHTML = `
-                ⚠️ <strong>Valores suspeitos:</strong> ${totalLaps.toLocaleString()} laps / ${totalCores} cores.<br>
-                Verifique se o log está no formato correto.
-            `;
-            return;
-        } else {
-            document.getElementById('alertBox').classList.remove('show');
+    if (validLines === 0) {
+        showToast('Nenhuma linha válida encontrada no log. Verifique o formato.');
+        return;
+    }
+
+    if (totalLaps > 100000 || totalCores > 1000) {
+        document.getElementById('alertBox').classList.add('show');
+        document.getElementById('alertBox').innerHTML = `
+            ⚠️ <strong>Valores suspeitos:</strong> ${totalLaps.toLocaleString()} laps / ${totalCores} cores.<br>
+            Verifique se o log está no formato correto.
+        `;
+        return;
+    } else {
+        document.getElementById('alertBox').classList.remove('show');
+    }
+
+    // Processar secas (dry streaks) - LÓGICA CORRIGIDA
+    let currentDry = 0;
+    
+    entries.forEach((entry) => {
+        currentDry += entry.laps;
+        
+        if (entry.cores > 0) {
+            // Registrar seca que terminou com um drop
+            if (currentDry > maxDry) maxDry = currentDry;
+            if (currentDry < minDry) minDry = currentDry;
+            
+            const compHr = (crystHr / crystPerThree) * 3;
+            const tempoAgil = currentDry / lapsHr;
+            const tempoCryst = compNeeded / compHr;
+            const gpHr = valVenda / (tempoAgil + tempoCryst);
+            
+            globalDryData.push({ laps: currentDry, date: entry.date });
+            globalGpData.push({ gpHr: gpHr, date: entry.date });
+            
+            currentDry = 0;  // Resetar após drop
         }
-
+    });
+                
         // --- Cálculos ---
-        const avgCore = totalCores > 0 ? Math.round(totalLaps / totalCores) : 0;
-        const realLapsPerHour = totalMinutes > 0 ? (totalLaps / (totalMinutes / 60)) : 0;
-        
-        const uniqueDaysCount = Object.keys(perDay).length;
-        const avgHoursPerDay = uniqueDaysCount > 0 ? (totalMinutes / 60) / uniqueDaysCount : 0;
-        
-        const compHr = (crystHr / crystPerThree) * 3;
-        const tempoCryst = totalCores > 0 ? (totalCores * compNeeded) / compHr : 0;
-        const tempoTotalHoras = (totalMinutes / 60) + tempoCryst;
-        const receita = totalCores * valVenda;
-        const gpPorHora = tempoTotalHoras > 0 ? receita / tempoTotalHoras : 0;
-
-        // --- Atualizar UI ---
         document.getElementById('r-laps').textContent = totalLaps.toLocaleString();
-        document.getElementById('r-shards').textContent = totalShards.toLocaleString();
-        document.getElementById('r-portables').textContent = totalPortables.toLocaleString();
-        document.getElementById('r-cores').textContent = totalCores.toLocaleString();
-        document.getElementById('r-avg-core').textContent = avgCore > 0 ? `~1/${avgCore}` : 'N/A';
-        
-        document.getElementById('r-receita').textContent = formatGP(receita);
-        
-        document.getElementById('r-time-real').textContent = formatHours(totalMinutes / 60);
-        document.getElementById('r-real-laps-hr').textContent = realLapsPerHour.toFixed(1) + ' laps/hr';
-        document.getElementById('r-avg-hr-day').textContent = formatHours(avgHoursPerDay) + '/dia';
-        document.getElementById('r-time-total').textContent = formatHours(tempoTotalHoras);
-        
-        document.getElementById('r-gp-geral').textContent = formatGP(gpPorHora) + '/hr';
+    document.getElementById('r-shards').textContent = totalShards.toLocaleString();
+    document.getElementById('r-portables').textContent = totalPortables.toLocaleString();
+    document.getElementById('r-cores').textContent = totalCores.toLocaleString();
+    
+    const avgCore = totalCores > 0 ? Math.round(totalLaps / totalCores) : 0;
+    document.getElementById('r-avg-core').textContent = avgCore > 0 ? `~1/${avgCore}` : 'N/A';
+    
+    const realLapsPerHour = totalMinutes > 0 ? (totalLaps / (totalMinutes / 60)) : 0;
+    const uniqueDaysCount = Object.keys(perDay).length;
+    const avgHoursPerDay = uniqueDaysCount > 0 ? (totalMinutes / 60) / uniqueDaysCount : 0;
+    
+    const compHr = (crystHr / crystPerThree) * 3;
+    const tempoCryst = totalCores > 0 ? (totalCores * compNeeded) / compHr : 0;
+    const tempoTotalHoras = (totalMinutes / 60) + tempoCryst;
+    const receita = totalCores * valVenda;
+    const gpPorHora = tempoTotalHoras > 0 ? receita / tempoTotalHoras : 0;
 
-        const calcGp = (laps) => {
-            if (!laps) return 0;
-            return valVenda / ((laps / lapsHr) + (compNeeded / compHr));
-        };
-        
-        document.getElementById('r-gp-max').textContent = maxDry ? formatGP(calcGp(maxDry)) + '/hr' : 'N/A';
-        document.getElementById('r-gp-min').textContent = minDry !== Infinity ? formatGP(calcGp(minDry)) + '/hr' : 'N/A';
+    document.getElementById('r-receita').textContent = formatGP(receita);
+    document.getElementById('r-time-real').textContent = formatHours(totalMinutes / 60);
+    document.getElementById('r-real-laps-hr').textContent = realLapsPerHour.toFixed(1) + ' laps/hr';
+    document.getElementById('r-avg-hr-day').textContent = formatHours(avgHoursPerDay) + '/dia';
+    document.getElementById('r-time-total').textContent = formatHours(tempoTotalHoras);
+    document.getElementById('r-gp-geral').textContent = formatGP(gpPorHora) + '/hr';
 
-        document.getElementById('r-current-dry').textContent = `${currentDry} laps (${formatHours(currentDry/lapsHr)})`;
-        document.getElementById('r-max-dry').textContent = maxDry ? `${maxDry} laps` : 'N/A';
-        document.getElementById('r-min-dry').textContent = minDry !== Infinity ? `${minDry} laps` : 'N/A';
+    const calcGp = (laps) => {
+        if (!laps) return 0;
+        return valVenda / ((laps / lapsHr) + (compNeeded / compHr));
+    };
+    
+    document.getElementById('r-gp-max').textContent = maxDry ? formatGP(calcGp(maxDry)) + '/hr' : 'N/A';
+    document.getElementById('r-gp-min').textContent = minDry !== Infinity ? formatGP(calcGp(minDry)) + '/hr' : 'N/A';
 
-        const dryPct = maxDry ? (currentDry / maxDry) * 100 : 0;
-        document.getElementById('dryProgressBar').style.width = Math.min(dryPct, 100) + '%';
+    // CORREÇÃO: Mostrar seca atual corretamente
+    document.getElementById('r-current-dry').textContent = `${currentDry} laps (${formatHours(currentDry/lapsHr)})`;
+    document.getElementById('r-max-dry').textContent = maxDry ? `${maxDry} laps` : 'N/A';
+    document.getElementById('r-min-dry').textContent = minDry !== Infinity ? `${minDry} laps` : 'N/A';
 
-        const prob = avgCore ? Math.exp(-(currentDry / avgCore)) : 0;
-        document.getElementById('rng-prob').textContent = (prob * 100).toFixed(2) + '%';
-        
-        let eta = 'N/A';
-        if (avgCore) {
-            const remaining = Math.max(0, avgCore - currentDry);
-            eta = formatHours(remaining / lapsHr);
-        }
-        document.getElementById('rng-eta').textContent = eta;
+    const dryPct = maxDry ? (currentDry / maxDry) * 100 : 0;
+    document.getElementById('dryProgressBar').style.width = Math.min(dryPct, 100) + '%';
+
+    const prob = avgCore ? Math.exp(-(currentDry / avgCore)) : 0;
+    document.getElementById('rng-prob').textContent = (prob * 100).toFixed(2) + '%';
+    
+    let eta = 'N/A';
+    if (avgCore) {
+        const remaining = Math.max(0, avgCore - currentDry);
+        eta = formatHours(remaining / lapsHr);
+    }
+    document.getElementById('rng-eta').textContent = eta;
+
 
         // Lista por dia
         const list = document.getElementById('r-per-day-list');
-        list.innerHTML = '';
-        const sortedDays = Object.keys(perDay).sort().slice(-4); 
-        sortedDays.forEach(day => {
-            const laps = perDay[day];
-            const div = document.createElement('div');
-            div.className = 'session-item';
-            
-            const dParts = day.split('-');
-            const prettyDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
-            
-            div.innerHTML = `<span>${prettyDate}</span><span style="color:var(--blue);font-weight:bold">${laps.toLocaleString()} laps</span>`;
-            list.appendChild(div);
-        });
+    list.innerHTML = '';
+    const sortedDays = Object.keys(perDay).sort().slice(-4); 
+    sortedDays.forEach(day => {
+        const laps = perDay[day];
+        const div = document.createElement('div');
+        div.className = 'session-item';
+        
+        const dParts = day.split('-');
+        const prettyDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
+        
+        div.innerHTML = `<span>${prettyDate}</span><span style="color:var(--blue);font-weight:bold">${laps.toLocaleString()} laps</span>`;
+        list.appendChild(div);
+    });
 
-        updateCharts();
+    updateCharts();
 
-        document.getElementById('setupContainer').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
-        document.getElementById('btnVoltar').style.display = 'inline-block';
-    }
+    document.getElementById('setupContainer').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('btnVoltar').style.display = 'inline-block';
+}
 
     function filterDataByTimeframe(dataArray, timeframe) {
         if (timeframe === 'total' || !logLatestDate) return dataArray;
