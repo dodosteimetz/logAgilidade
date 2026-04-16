@@ -884,15 +884,8 @@
                 perDay[dia] = { laps: 0, minutes: 0 };
             }
             perDay[dia].laps += laps;
-            perDay[dia].minutes += entryMinutes;
+            perDay[dia].minutes += entryMinutes;           
             
-            entries.push({
-                date: currentDate,
-                laps: laps,
-                cores: cores,
-                dia: dia
-            });
-    
             // Armazenar entrada para processamento de secas
             entries.push({
                 date: currentDate,
