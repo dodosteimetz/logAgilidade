@@ -725,7 +725,7 @@
 
 
                 return `[${dataRaw}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
-            }(.filter(line => line !== "").join('\n');
+            }.filter(line => line !== "").join('\n');
 
             const logInput = document.getElementById('logInput');
             logInput.value = logText;
