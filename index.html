@@ -824,7 +824,7 @@
     globalGpData = [];
     logLatestDate = null;
     
-    const perDay = {};
+    const  = {};
     const lines = log.split('\n');
     let validLines = 0;
     
@@ -879,7 +879,11 @@
     // Já está em YYYY-MM-DD
             dia = dateRaw.split(' ')[0];
             }
-            perDay[dia] = (perDay[dia] || 0) + laps;
+            if (!perDay[dia]) {
+            perDay[dia] = { laps: 0, minutes: 0 };
+            }
+            perDay[dia].laps += laps;
+            perDay[dia].minutes += entryMinutes;
             
             // Armazenar entrada para processamento de secas
             entries.push({
@@ -989,15 +993,15 @@
 list.innerHTML = '';
 const sortedDays = Object.keys(perDay).sort().slice(-4); 
 sortedDays.forEach(day => {
-    const laps = perDay[day];
+    const dayData = perDay[day];
     const div = document.createElement('div');
     div.className = 'session-item';
     
-    // day está no formato YYYY-MM-DD
     const [year, month, dayNum] = day.split('-');
-    const prettyDate = `${dayNum}/${month}/${year}`;  // DD/MM/YYYY
+    const prettyDate = `${dayNum}/${month}/${year}`;
     
-    div.innerHTML = `<span>${prettyDate}</span><span style="color:var(--blue);font-weight:bold">${laps.toLocaleString()} laps</span>`;
+    const timeStr = formatHours(dayData.minutes / 60);
+    div.innerHTML = `<span>${prettyDate}</span><span style="color:var(--blue);font-weight:bold">${dayData.laps.toLocaleString()} laps (${timeStr})</span>`;
     list.appendChild(div);
 });
 
