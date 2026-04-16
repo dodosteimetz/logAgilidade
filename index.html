@@ -664,13 +664,41 @@
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec";
 
     // Adicionado (?::\d{2})? para capturar tanto datas com segundos quanto sem
-    const LOG_REGEX = /\[(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}(?::\d{2})?)\]\s*Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)\s*\|\s*Tempo:\s*(\d+)h\s*(\d+)m/i;
+    const LOG_REGEX = /\\[((?:\\d{4}-\\d{2}-\\d{2}|\\d{2}\\/\\d{2}\\/\\d{4})\\s\\d{2}:\\d{2}(?::\\d{2})?)\\]\\s*Laps:\\s*(\\d+)\\s*\\|\\s*Cores:\\s*(\\d+)\\s*\\|\\s*Shards:\\s*(\\d+)\\s*\\|\\s*Portables:\\s*(\\d+)\\s*\\|\\s*Tempo:\\s*(\\d+)h\\s*(\\d+)m/i;
     
     let charts = {};
     let globalDryData = [];
     let globalGpData = [];
     let logLatestDate = null;
 
+    function parseDateString(dateStr) {
+        // Verifica se é formato brasileiro DD/MM/YYYY
+        if (dateStr.includes('/')) {
+            const [datePart, timePart] = dateStr.split(' ');
+            const [day, month, year] = datePart.split('/');
+            
+            // Se tiver parte de tempo
+            if (timePart) {
+                const [hours, minutes, seconds] = timePart.split(':');
+                // Mês em JavaScript é 0-indexed (0 = Janeiro)
+                return new Date(+year, +month - 1, +day, +hours, +minutes, +(seconds || 0));
+            }
+            return new Date(+year, +month - 1, +day);
+        }
+        // Formato ISO YYYY-MM-DD
+        return new Date(dateStr);
+    }
+
+    // CORREÇÃO: Função para converter data para formato ISO YYYY-MM-DD (para exibição)
+    function toISODateString(dateObj) {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
     // Função que puxa do Sheets Automaticamente
     async function syncFromSheets() {
         showToast('⏳ Sincronizando com a Planilha...');
@@ -684,17 +712,17 @@
                 let dataRaw = String(row[0]).trim();
                 
                 // Formatação da data vinda do Google Sheets
-                if (dataRaw.includes('GMT')) {
+                if (dataRaw.match(/^\\d{2}\\/\\d{2}\\/\\d{4}/)) {
+                    // Já está no formato brasileiro, mantém como está para o regex capturar
+                    // O regex foi atualizado para aceitar ambos os formatos
+                } else if (dataRaw.includes('GMT')) {
+                    // Formato antigo com GMT
                     const d = new Date(dataRaw);
-                    dataRaw = d.getFullYear() + "-" + 
-                              String(d.getMonth() + 1).padStart(2, '0') + "-" + 
-                              String(d.getDate()).padStart(2, '0') + " " +
-                              String(d.getHours()).padStart(2, '0') + ":" +
-                              String(d.getMinutes()).padStart(2, '0') + ":00";
-                }
+                    dataRaw = toISODateString(d);
+
 
                 return `[${dataRaw}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
-            }).filter(line => line !== "").join('\n');
+            }).filter(line => line !== "").join('\\n');
 
             const logInput = document.getElementById('logInput');
             logInput.value = logText;
@@ -811,7 +839,7 @@
         logLatestDate = null;
         
         const perDay = {};
-        const lines = log.split('\n');
+        const lines = log.split('\\n');
         let validLines = 0;
 
         lines.forEach(line => {
@@ -825,9 +853,9 @@
                 const hours = parseInt(match[6], 10);
                 const mins = parseInt(match[7], 10);
                 const dateStr = match[1]; 
-                const dayStr = dateStr.split(' ')[0]; 
+                 
                 
-                const currentDate = new Date(dateStr);
+                const currentDate = parseDateString(dateStr);
                 if (!logLatestDate || currentDate > logLatestDate) {
                     logLatestDate = currentDate;
                 }
@@ -856,12 +884,15 @@
 
                     currentDry = 0;
                 }
-
+                const dayStr = toISODateString(currentDate).split(' ')[0]; 
                 perDay[dayStr] = (perDay[dayStr] || 0) + laps;
             }
         });
 
-        if (validLines === 0) return;
+        if (validLines === 0) {
+            showToast('Nenhuma linha válida encontrada no log. Verifique o formato.');
+            return;
+        }
 
         if (totalLaps > 100000 || totalCores > 1000) {
             document.getElementById('alertBox').classList.add('show');
