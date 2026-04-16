@@ -704,16 +704,8 @@
             const logText = rows.map(row => {
                 if (row[1] === undefined || row[1] === null || row[1] === "") return "";
                 
-                let dataRaw = String(row[0]).trim();
-                
-                // Formatação da data vinda do Google Sheets
-                if (dataRaw.match(/^\d{2}\/\d{2}\/\d{4}/)) {
-                    // Formato brasileiro, mantém como está
-                } else if (dataRaw.includes('GMT')) {
-                    // Formato antigo com GMT
-                    const d = new Date(dataRaw);
-                    dataRaw = toISODateString(d);
-                }
+                let dataRaw = String(row[0]).trim();                
+            
 
                 return `[${dataRaw}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
             }).filter(line => line !== "").join('\n');
@@ -875,10 +867,10 @@
             }
             
             // Formatar dia para agrupamento
-            let dia = dateRaw.split(' ')[0];
+            let dia = dateRaw.split(' ')[0];  // Pega apenas a data, ignora hora
             if (dia.includes('/')) {
-                const p = dia.split('/');
-                if(p.length === 3) dia = `${p[2]}-${p[1]}-${p[0]}`;
+            const p = dia.split('/');
+            if(p.length === 3) dia = `${p[2]}-${p[1]}-${p[0]}`;  // Converte DD/MM/YYYY → YYYY-MM-DD
             }
             perDay[dia] = (perDay[dia] || 0) + laps;
             
