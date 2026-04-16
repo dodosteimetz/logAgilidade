@@ -879,6 +879,7 @@
     // Já está em YYYY-MM-DD
             dia = dateRaw.split(' ')[0];
             }
+            perDay[dia] = (perDay[dia] || 0) + laps;
             if (!perDay[dia]) {
             perDay[dia] = { laps: 0, minutes: 0 };
             }
