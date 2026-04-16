@@ -716,16 +716,15 @@
                 
                 // Formatação da data vinda do Google Sheets
                 if (dataRaw.match(/^\d{2}\/\d{2}\/\d{4}/)) {
-                    // Já está no formato brasileiro, mantém como está para o regex capturar
-                    // O regex foi atualizado para aceitar ambos os formatos
+                    // Formato brasileiro, mantém como está
                 } else if (dataRaw.includes('GMT')) {
                     // Formato antigo com GMT
                     const d = new Date(dataRaw);
                     dataRaw = toISODateString(d);
-
+                }
 
                 return `[${dataRaw}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
-            }.filter(line => line !== "").join('\n');
+            }).filter(line => line !== "").join('\n');
 
             const logInput = document.getElementById('logInput');
             logInput.value = logText;
