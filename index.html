@@ -610,9 +610,13 @@
                     <span class="stat-value peach" id="rng-prob">—</span>
                 </div>
                 <div class="stat-row">
-                    <span class="stat-label">Previsão Próximo Core</span>
+                    <span class="stat-label">Tempo p/ Media de Core</span>
                     <span class="stat-value blue" id="rng-eta">—</span>
                 </div>
+                <div class="stat-row">
+                    <span class="stat-label">Tempo até a Maior Seca</span>
+        <span class="stat-value red" id="rng-time-to-max">—</span>
+    </div>
                 <div style="margin-top: auto; padding: 10px; background: rgba(203, 166, 247, 0.1); border-radius: 6px; font-size: 0.75rem; color: var(--subtext);">
                     💡 Baseado na distribuição de Poisson
                 </div>
@@ -988,7 +992,17 @@
         eta = formatHours(remaining / lapsHr);
     }
     document.getElementById('rng-eta').textContent = eta;
-
+    
+    let timeToMax = 'N/A';
+    if (maxDry > 0) {
+        const lapsToMax = maxDry - currentDry;
+        if (lapsToMax > 0) {
+            timeToMax = formatHours(lapsToMax / lapsHr);
+        } else {
+            timeToMax = 'Quebrando recorde!'; // Mensagem caso já tenha ultrapassado a maior seca
+        }
+    }
+    document.getElementById('rng-time-to-max').textContent = timeToMax;
 
         // Lista por dia
         const list = document.getElementById('r-per-day-list');
