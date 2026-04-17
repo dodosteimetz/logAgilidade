@@ -1076,12 +1076,29 @@
         if (charts.dry) charts.dry.destroy();
         if (charts.gp) charts.gp.destroy();
 
+        // Configuração de Tooltip compartilhada para mostrar ambas as informações
+        const sharedTooltipOptions = {
+            callbacks: {
+                label: function(context) {
+                    const index = context.dataIndex;
+                    const laps = dryData[index]?.laps || 0;
+                    const gpHr = gpData[index]?.gpHr || 0;
+                    
+                    // Retorna um array de strings para criar múltiplas linhas no tooltip
+                    return [
+                        `Laps: ${laps.toLocaleString()}`,
+                        `GP/hr: ${formatGP(gpHr)}/h`
+                    ];
+                }
+            }
+        };
+        
         charts.dry = new Chart(document.getElementById('dryChart'), {
             type: 'line',
             data: {
                 labels: dryData.map((_, i) => `#${i+1}`),
                 datasets: [{
-                    label: 'Laps até o drop',
+                    label: 'Informações do Drop',
                     data: dryData.map(d => d.laps),
                     borderColor: '#f38ba8',
                     backgroundColor: 'rgba(243, 139, 168, 0.1)',
@@ -1094,7 +1111,10 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: sharedTooltipOptions // Aplicando o tooltip personalizado
+                },
                 scales: {
                     y: { 
                         grid: { color: 'rgba(69, 71, 90, 0.3)' }, 
@@ -1113,6 +1133,7 @@
             data: {
                 labels: gpData.map((_, i) => `#${i+1}`),
                 datasets: [{
+                    label: 'Informações do Drop',
                     data: gpData.map(d => d.gpHr),
                     borderColor: '#cba6f7',
                     backgroundColor: 'rgba(203, 166, 247, 0.1)',
@@ -1124,7 +1145,10 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: sharedTooltipOptions // Aplicando o tooltip personalizado
+                },
                 scales: {
                     y: { 
                         grid: { color: 'rgba(69, 71, 90, 0.3)' }, 
