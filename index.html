@@ -1024,16 +1024,13 @@
         
         // Textos a serem exibidos (esconde as horas se for 0, ou esconde os minutos se for exato)
         const hrsText = hrs > 0 ? `${hrs}h` : '';
-        const minsText = (mins > 0 || hrs === 0) ? `${mins}m` : '';
-        
-        // Ajusta o texto para singular/plural
-        const coreText = dayData.cores > 1 ? 'cores' : 'core ';
+        const minsText = (mins > 0 || hrs === 0) ? `${mins}m` : '';        
         
         // Usamos Flexbox e tamanhos fixos para garantir o alinhamento perfeito
         div.innerHTML = `
             <span>${prettyDate}</span>
             <div style="display: flex; gap: 6px; font-weight: bold;">
-                <span style="color: var(--red); width: 70px; text-align: right;">${dayData.cores} ${coreText}</span>                
+                <span style="color: var(--red); width: 65px; text-align: right;">${dayData.cores} core</span>               
                 <span style="color: var(--text); width: 85px; text-align: right;">${dayData.laps.toLocaleString()} laps</span>
                 <div style="display: flex; color: var(--blue); width: 75px; justify-content: flex-end; gap: 4px;">
                     <span style="width: 35px; text-align: right;">${hrsText}</span>
