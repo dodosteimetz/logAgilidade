@@ -1078,6 +1078,10 @@
 
         // Configuração de Tooltip compartilhada para mostrar ambas as informações
         const sharedTooltipOptions = {
+            padding: 12, // Deixa a caixa preta mais "gordinha" e com respiro
+            displayColors: false, // Remove a caixinha quadrada padrão que estava com a cor errada
+            titleFont: { size: 14 },
+            bodyFont: { size: 13, family: 'JetBrains Mono' },
             callbacks: {
                 label: function(context) {
                     const index = context.dataIndex;
@@ -1086,8 +1090,9 @@
                     
                     // Retorna um array de strings para criar múltiplas linhas no tooltip
                     return [
-                        `Laps: ${laps.toLocaleString()}`,
-                        `GP/hr: ${formatGP(gpHr)}/h`
+                         `🔴 Laps:  ${laps.toLocaleString()}`,
+                        ``, 
+                        `🟣 GP/hr: ${formatGP(gpHr)}/h`
                     ];
                 }
             }
@@ -1098,7 +1103,7 @@
             data: {
                 labels: dryData.map((_, i) => `#${i+1}`),
                 datasets: [{
-                    label: 'Informações do Drop',
+                    label: 'Seca',
                     data: dryData.map(d => d.laps),
                     borderColor: '#f38ba8',
                     backgroundColor: 'rgba(243, 139, 168, 0.1)',
@@ -1116,14 +1121,8 @@
                     tooltip: sharedTooltipOptions // Aplicando o tooltip personalizado
                 },
                 scales: {
-                    y: { 
-                        grid: { color: 'rgba(69, 71, 90, 0.3)' }, 
-                        ticks: { color: '#bac2de', font: { family: 'JetBrains Mono' } }
-                    },
-                    x: { 
-                        grid: { display: false }, 
-                        ticks: { display: false }
-                    }
+                    y: { grid: { color: 'rgba(69, 71, 90, 0.3)' }, ticks: { color: '#bac2de', font: { family: 'JetBrains Mono' } } },
+                    x: { grid: { display: false }, ticks: { display: false } }
                 }
             }
         });
@@ -1133,7 +1132,7 @@
             data: {
                 labels: gpData.map((_, i) => `#${i+1}`),
                 datasets: [{
-                    label: 'Informações do Drop',
+                    label: 'GP/hr',
                     data: gpData.map(d => d.gpHr),
                     borderColor: '#cba6f7',
                     backgroundColor: 'rgba(203, 166, 247, 0.1)',
@@ -1150,17 +1149,8 @@
                     tooltip: sharedTooltipOptions // Aplicando o tooltip personalizado
                 },
                 scales: {
-                    y: { 
-                        grid: { color: 'rgba(69, 71, 90, 0.3)' }, 
-                        ticks: { 
-                            color: '#bac2de',
-                            callback: v => formatGP(v) + '/h'
-                        }
-                    },
-                    x: { 
-                        grid: { display: false }, 
-                        ticks: { display: false }
-                    }
+                    y: { grid: { color: 'rgba(69, 71, 90, 0.3)' }, ticks: { color: '#bac2de', callback: v => formatGP(v) + '/h' } },
+                    x: { grid: { display: false }, ticks: { display: false } }
                 }
             }
         });
