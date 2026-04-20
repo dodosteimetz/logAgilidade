@@ -932,8 +932,7 @@
             const compHr = (crystHr / crystPerThree) * 3;
             const tempoAgil = currentDry / lapsHr;
             const tempoCryst = compNeeded / compHr;
-            const gpHr = valVenda / (tempoAgil + tempoCryst);
-            const timeInHours = currentDry / lapsHr;
+            const gpHr = valVenda / (tempoAgil + tempoCryst);            
             
             globalDryData.push({ laps: currentDry, date: entry.date });
             globalGpData.push({ gpHr: gpHr, date: entry.date });
@@ -1088,7 +1087,7 @@
                     const index = context.dataIndex;
                     const laps = dryData[index]?.laps || 0;
                     const gpHr = gpData[index]?.gpHr || 0;
-                    const timeInHours = dryData[index]?.time || 0;
+                    const timeInHours = laps / Math.max(1, lapsHr);
                     // Retorna um array de strings para criar múltiplas linhas no tooltip
                     return [
                          `🔴 Laps:  ${laps.toLocaleString()}`,
