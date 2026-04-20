@@ -933,6 +933,7 @@
             const tempoAgil = currentDry / lapsHr;
             const tempoCryst = compNeeded / compHr;
             const gpHr = valVenda / (tempoAgil + tempoCryst);
+            const timeInHours = currentDry / lapsHr;
             
             globalDryData.push({ laps: currentDry, date: entry.date });
             globalGpData.push({ gpHr: gpHr, date: entry.date });
@@ -1087,11 +1088,13 @@
                     const index = context.dataIndex;
                     const laps = dryData[index]?.laps || 0;
                     const gpHr = gpData[index]?.gpHr || 0;
-                    
+                    const timeInHours = dryData[index]?.time || 0;
                     // Retorna um array de strings para criar múltiplas linhas no tooltip
                     return [
                          `🔴 Laps:  ${laps.toLocaleString()}`,
                         ``, 
+                        `🟢 Tempo: ${formatHours(timeInHours)}`
+                        ``,
                         `🟣 GP/hr: ${formatGP(gpHr)}/h`
                     ];
                 }
