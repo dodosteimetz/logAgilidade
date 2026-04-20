@@ -1069,10 +1069,12 @@
         const filteredDry = filterDataByTimeframe(globalDryData, dryFilter);
         const filteredGp = filterDataByTimeframe(globalGpData, gpFilter);
         
-        renderCharts(filteredDry, filteredGp);
+        const lapsHrValue = parseFloat(document.getElementById('lapsHr').value) || 83;
+        
+        renderCharts(filteredDry, filteredGp, lapsHrValue);
     }
 
-    function renderCharts(dryData, gpData) {
+    function renderCharts(dryData, gpData, lapsHr) {
         if (charts.dry) charts.dry.destroy();
         if (charts.gp) charts.gp.destroy();
 
@@ -1087,7 +1089,7 @@
                     const index = context.dataIndex;
                     const laps = dryData[index]?.laps || 0;
                     const gpHr = gpData[index]?.gpHr || 0;
-                    const timeInHours = laps / Math.max(1, lapsHr);
+                    const timeInHours = laps / (lapsHr > 0 ? lapsHr : 1);
                     // Retorna um array de strings para criar múltiplas linhas no tooltip
                     return [
                          `🔴 Laps:  ${laps.toLocaleString()}`,
