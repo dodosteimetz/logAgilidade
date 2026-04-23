@@ -385,6 +385,7 @@
             position: relative;
             height: 300px;
             width: 100%;
+            margin-top: 10px;
         }
 
         .chart-filter-select {
@@ -406,7 +407,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            flex-grow: 1;
         }
 
         .chart-toggle-btn:hover {
@@ -426,9 +426,9 @@
             align-items: center;
             margin-bottom: 15px;
             border-bottom: 1px solid var(--muted);
-            padding-bottom: 10px;
+            padding-bottom: 15px;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
         }
 
         .session-list {
@@ -668,20 +668,20 @@
             <div class="card">
                 
                 <div class="filter-header">
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button id="btnChartDry" class="chart-toggle-btn active" onclick="switchChartType('dry')">📈 Evolução das Secas</button>
+                        <button id="btnChartGp" class="chart-toggle-btn" onclick="switchChartType('gp')">📊 GP/hr por Drop</button>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
                         <span style="font-size: 0.8rem; font-weight: bold; color: var(--subtext); text-transform: uppercase;">Filtro de Período:</span>
+                        <span id="dateRangeLabel" style="font-size: 0.75rem; color: var(--green); font-family: 'JetBrains Mono', monospace; font-weight: bold;"></span>
                         <select id="mainChartFilter" class="chart-filter-select" onchange="updateCharts()">
                             <option value="total">Total</option>
                             <option value="month">Último Mês</option>
                             <option value="week">Última Semana</option>
                         </select>
                     </div>
-                    <span id="dateRangeLabel" style="font-size: 0.75rem; color: var(--green); font-family: 'JetBrains Mono', monospace; font-weight: bold;"></span>
-                </div>
-
-                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                    <button id="btnChartDry" class="chart-toggle-btn active" onclick="switchChartType('dry')">📈 Evolução das Secas</button>
-                    <button id="btnChartGp" class="chart-toggle-btn" onclick="switchChartType('gp')">📊 GP/hr por Drop</button>
                 </div>
 
                 <div class="chart-container">
@@ -695,13 +695,11 @@
 <div class="toast" id="toast"></div>
 
 <script>
-    // URL do seu Google Sheets Apps Script
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec";
-
     const LOG_REGEX = /\[(.*?)\]\s*Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)\s*\|\s*Tempo:\s*(.*)/i;
     
     let mainChartInstance = null;
-    let currentChartType = 'dry'; // Começa mostrando 'dry'
+    let currentChartType = 'dry'; 
     let globalDryData = [];
     let globalGpData = [];
     let logLatestDate = null;
@@ -720,14 +718,6 @@
         return new Date(dateStr);
     }
 
-    function toISODateString(dateObj) {
-        const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`; 
-    }
-
-    // Função para formatar data BR (DD/MM/YYYY) para a label visual
     function formatDateBR(dateObj) {
         if (!dateObj) return '';
         const day = String(dateObj.getDate()).padStart(2, '0');
@@ -1073,15 +1063,10 @@
         });
     }
 
-    // Função NOVA para alternar o gráfico através dos botões
     function switchChartType(type) {
         currentChartType = type;
-        
-        // Atualiza estilo dos botões
         document.getElementById('btnChartDry').classList.toggle('active', type === 'dry');
         document.getElementById('btnChartGp').classList.toggle('active', type === 'gp');
-        
-        // Re-renderiza o gráfico com o novo tipo
         updateCharts();
     }
 
@@ -1089,7 +1074,6 @@
         const filter = document.getElementById('mainChartFilter').value;
         const lapsHrValue = parseFloat(document.getElementById('lapsHr').value) || 83;
         
-        // Atualiza a Label de Data Dinâmica
         let dateLabelText = "Período Completo";
         if (logLatestDate) {
             let startDate = new Date(logLatestDate);
@@ -1101,7 +1085,6 @@
                 startDate.setDate(startDate.getDate() - 30);
                 dateLabelText = `${formatDateBR(startDate)} a ${formatDateBR(logLatestDate)} (Último Mês)`;
             } else {
-                // Tenta achar o primeiro log real
                 let firstDate = null;
                 if (globalDryData.length > 0) firstDate = globalDryData[0].date;
                 if (firstDate) {
