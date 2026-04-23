@@ -1080,15 +1080,15 @@
             
             if (filter === 'week') {
                 startDate.setDate(startDate.getDate() - 7);
-                dateLabelText = `${formatDateBR(startDate)} a ${formatDateBR(logLatestDate)} (Última Semana)`;
+                dateLabelText = `${formatDateBR(startDate)} a ${formatDateBR(logLatestDate)}`;
             } else if (filter === 'month') {
                 startDate.setDate(startDate.getDate() - 30);
-                dateLabelText = `${formatDateBR(startDate)} a ${formatDateBR(logLatestDate)} (Último Mês)`;
+                dateLabelText = `${formatDateBR(startDate)} a ${formatDateBR(logLatestDate)}`;
             } else {
                 let firstDate = null;
                 if (globalDryData.length > 0) firstDate = globalDryData[0].date;
                 if (firstDate) {
-                    dateLabelText = `${formatDateBR(firstDate)} a ${formatDateBR(logLatestDate)} (Total)`;
+                    dateLabelText = `${formatDateBR(firstDate)} a ${formatDateBR(logLatestDate)}`;
                 }
             }
         }
