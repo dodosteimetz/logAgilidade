@@ -383,16 +383,52 @@
 
         .chart-container {
             position: relative;
-            height: 250px;
+            height: 300px;
             width: 100%;
         }
 
         .chart-filter-select {
-            font-size: 0.7rem;
-            padding: 2px 6px;
+            font-size: 0.75rem;
+            padding: 4px 8px;
             height: auto;
             width: auto;
             background-color: var(--surface);
+            border-radius: 4px;
+        }
+
+        .chart-toggle-btn {
+            background-color: var(--surface);
+            color: var(--subtext);
+            border: 1px solid var(--muted);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-grow: 1;
+        }
+
+        .chart-toggle-btn:hover {
+            background-color: var(--overlay);
+            color: var(--text);
+        }
+
+        .chart-toggle-btn.active {
+            background-color: rgba(137, 180, 250, 0.1);
+            color: var(--blue);
+            border-color: var(--blue);
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--muted);
+            padding-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .session-list {
@@ -628,31 +664,28 @@
             </div>
         </div>
 
-        <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="dashboard-grid" style="grid-template-columns: 1fr;">
             <div class="card">
-                <div class="card-title teal">
-                    <span>📈 Evolução das Secas</span>
-                    <select id="filterDry" class="chart-filter-select" onchange="updateCharts()">
-                        <option value="total">Total</option>
-                        <option value="month">Último Mês</option>
-                        <option value="week">Última Semana</option>
-                    </select>
+                
+                <div class="filter-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 0.8rem; font-weight: bold; color: var(--subtext); text-transform: uppercase;">Filtro de Período:</span>
+                        <select id="mainChartFilter" class="chart-filter-select" onchange="updateCharts()">
+                            <option value="total">Total</option>
+                            <option value="month">Último Mês</option>
+                            <option value="week">Última Semana</option>
+                        </select>
+                    </div>
+                    <span id="dateRangeLabel" style="font-size: 0.75rem; color: var(--green); font-family: 'JetBrains Mono', monospace; font-weight: bold;"></span>
                 </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button id="btnChartDry" class="chart-toggle-btn active" onclick="switchChartType('dry')">📈 Evolução das Secas</button>
+                    <button id="btnChartGp" class="chart-toggle-btn" onclick="switchChartType('gp')">📊 GP/hr por Drop</button>
+                </div>
+
                 <div class="chart-container">
-                    <canvas id="dryChart"></canvas>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title mauve">
-                    <span>📊 GP/hr por Drop</span>
-                    <select id="filterGp" class="chart-filter-select" onchange="updateCharts()">
-                        <option value="total">Total</option>
-                        <option value="month">Último Mês</option>
-                        <option value="week">Última Semana</option>
-                    </select>
-                </div>
-                <div class="chart-container">
-                    <canvas id="gpChart"></canvas>
+                    <canvas id="mainChart"></canvas>
                 </div>
             </div>
         </div>
@@ -665,41 +698,44 @@
     // URL do seu Google Sheets Apps Script
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxjDfFF2jpV-xvGRj0DkpH_Fo7A6Lg82QoEDOOnUulCPxiW-f6itTqXoRy_I55FjbZO3g/exec";
 
-    // Adicionado (?::\d{2})? para capturar tanto datas com segundos quanto sem
-    // Regex super flexível: Pega tudo que estiver entre [ ], e caça os números não importa o espaço
     const LOG_REGEX = /\[(.*?)\]\s*Laps:\s*(\d+)\s*\|\s*Cores:\s*(\d+)\s*\|\s*Shards:\s*(\d+)\s*\|\s*Portables:\s*(\d+)\s*\|\s*Tempo:\s*(.*)/i;
     
-    let charts = {};
+    let mainChartInstance = null;
+    let currentChartType = 'dry'; // Começa mostrando 'dry'
     let globalDryData = [];
     let globalGpData = [];
     let logLatestDate = null;
 
     function parseDateString(dateStr) {
-        // Verifica se é formato brasileiro DD/MM/YYYY
         if (dateStr.includes('/')) {
             const [datePart, timePart] = dateStr.split(' ');
             const [day, month, year] = datePart.split('/');
             
-            // Se tiver parte de tempo
             if (timePart) {
                 const [hours, minutes, seconds] = timePart.split(':');
-                // Mês em JavaScript é 0-indexed (0 = Janeiro)
                 return new Date(+year, +month - 1, +day, +hours, +minutes, +(seconds || 0));
             }
             return new Date(+year, +month - 1, +day);
         }
-        // Formato ISO YYYY-MM-DD
         return new Date(dateStr);
     }
 
-    // CORREÇÃO: Função para converter data para formato ISO YYYY-MM-DD (para exibição)
     function toISODateString(dateObj) {
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;  // ← Retorna apenas YYYY-MM-DD
-}
-    // Função que puxa do Sheets Automaticamente
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`; 
+    }
+
+    // Função para formatar data BR (DD/MM/YYYY) para a label visual
+    function formatDateBR(dateObj) {
+        if (!dateObj) return '';
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const year = dateObj.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+
     async function syncFromSheets() {
         showToast('⏳ Sincronizando com a Planilha...');
         try {
@@ -708,10 +744,7 @@
 
             const logText = rows.map(row => {
                 if (row[1] === undefined || row[1] === null || row[1] === "") return "";
-                
                 let dataRaw = String(row[0]).trim();                
-            
-
                 return `[${dataRaw}] Laps: ${row[1]} | Cores: ${row[2]} | Shards: ${row[3]} | Portables: ${row[4]} | Tempo: ${row[5]}`;
             }).filter(line => line !== "").join('\n');
 
@@ -736,7 +769,6 @@
         }
     }
 
-    // Auto-executa no load da página
     window.addEventListener('load', syncFromSheets);
 
     function toggleSection(section) {
@@ -759,7 +791,6 @@
         t.classList.add('show');
         setTimeout(() => {
             t.classList.remove('show');
-            // Reseta a cor pro padrão azulzinho dps de fechar
             setTimeout(() => { t.style.borderColor = 'var(--blue)'; t.style.color = 'var(--blue)'; }, 300);
         }, 3000);
     }
@@ -809,245 +840,225 @@
     }
 
     function processLog() {
-    const log = document.getElementById('logInput').value;
-    if (!log.trim()) {
-        showToast('Nenhum log encontrado para processar.');
-        return;
-    }
-
-    const valVenda = parseInputGP(document.getElementById('valVenda').value);
-    const lapsHr = parseFloat(document.getElementById('lapsHr').value) || 83;
-    const crystHr = parseFloat(document.getElementById('crystHr').value) || 2250;
-    const crystPerThree = parseFloat(document.getElementById('crystPerThree').value) || 750;
-    const compNeeded = parseFloat(document.getElementById('compNeeded').value) || 7;
-
-    let totalLaps = 0, totalCores = 0, totalMinutes = 0;
-    let totalShards = 0, totalPortables = 0;
-    let maxDry = 0, minDry = Infinity;
-    let perDay = {};
-    
-    globalDryData = [];
-    globalGpData = [];
-    logLatestDate = null;
-    
-    
-    const lines = log.split('\n');
-    let validLines = 0;
-    
-    // Array para armazenar todas as entradas processadas
-    const entries = [];
-
-    lines.forEach(line => {
-        const m = line.match(LOG_REGEX);
-        if(m) {
-            validLines++;
-            
-            const dateRaw = m[1].trim(); 
-            const laps = parseInt(m[2]) || 0;
-            const cores = parseInt(m[3]) || 0;
-            const shards = parseInt(m[4]) || 0;
-            const portables = parseInt(m[5]) || 0;
-            const tempoStr = m[6].toLowerCase();
-
-            // Extrair horas e minutos
-            let h = 0, min = 0;
-            const hMatch = tempoStr.match(/(\d+)h/);
-            const mMatch = tempoStr.match(/(\d+)m/);
-            if (hMatch) h = parseInt(hMatch[1]);
-            if (mMatch) min = parseInt(mMatch[1]);
-            
-            const entryMinutes = (h * 60) + min;
-            
-            totalLaps += laps;
-            totalCores += cores;
-            totalShards += shards;
-            totalPortables += portables;
-            totalMinutes += entryMinutes;
-
-            // Processar data
-            let currentDate = parseDateString(dateRaw);
-            
-            // Atualizar data mais recente
-            if (!logLatestDate || currentDate > logLatestDate) {
-                logLatestDate = currentDate;
-            }
-            
-            // Formatar dia para agrupamento
-            let dia;
-            if (dateRaw.includes('T')) {
-    // Formato ISO: 2026-04-15T06:51:48.000Z
-             dia = dateRaw.split('T')[0];  // Pega "2026-04-15"
-            } else if (dateRaw.includes('/')) {
-    // Formato BR: 15/04/2026 06:51:48
-            const p = dateRaw.split(' ')[0].split('/');
-            if(p.length === 3) dia = `${p[2]}-${p[1]}-${p[0]}`;  // Converte DD/MM/YYYY → YYYY-MM-DD
-            } else {
-    // Já está em YYYY-MM-DD
-            dia = dateRaw.split(' ')[0];
-            }            
-            if (!perDay[dia]) {
-                perDay[dia] = { laps: 0, minutes: 0, cores: 0 };
-            }
-            perDay[dia].laps += laps;
-            perDay[dia].minutes += entryMinutes;
-            perDay[dia].cores += cores;
-            
-            // Armazenar entrada para processamento de secas
-            entries.push({
-                date: currentDate,
-                laps: laps,
-                cores: cores,
-                dia: dia
-            });
+        const log = document.getElementById('logInput').value;
+        if (!log.trim()) {
+            showToast('Nenhum log encontrado para processar.');
+            return;
         }
-    });
 
-    if (validLines === 0) {
-        showToast('Nenhuma linha válida encontrada no log. Verifique o formato.');
-        return;
-    }
+        const valVenda = parseInputGP(document.getElementById('valVenda').value);
+        const lapsHr = parseFloat(document.getElementById('lapsHr').value) || 83;
+        const crystHr = parseFloat(document.getElementById('crystHr').value) || 2250;
+        const crystPerThree = parseFloat(document.getElementById('crystPerThree').value) || 750;
+        const compNeeded = parseFloat(document.getElementById('compNeeded').value) || 7;
 
-    if (totalLaps > 100000 || totalCores > 1000) {
-        document.getElementById('alertBox').classList.add('show');
-        document.getElementById('alertBox').innerHTML = `
-            ⚠️ <strong>Valores suspeitos:</strong> ${totalLaps.toLocaleString()} laps / ${totalCores} cores.<br>
-            Verifique se o log está no formato correto.
-        `;
-        return;
-    } else {
-        document.getElementById('alertBox').classList.remove('show');
-    }
-
-    // Processar secas (dry streaks) - LÓGICA CORRIGIDA
-    let currentDry = 0;
-    
-    entries.forEach((entry) => {
-        currentDry += entry.laps;
+        let totalLaps = 0, totalCores = 0, totalMinutes = 0;
+        let totalShards = 0, totalPortables = 0;
+        let maxDry = 0, minDry = Infinity;
+        let perDay = {};
         
-        if (entry.cores > 0) {
-            // Registrar seca que terminou com um drop
-            if (currentDry > maxDry) maxDry = currentDry;
-            if (currentDry < minDry) minDry = currentDry;
-            
-            const compHr = (crystHr / crystPerThree) * 3;
-            const tempoAgil = currentDry / lapsHr;
-            const tempoCryst = compNeeded / compHr;
-            const gpHr = valVenda / (tempoAgil + tempoCryst);            
-            
-            globalDryData.push({ laps: currentDry, date: entry.date });
-            globalGpData.push({ gpHr: gpHr, date: entry.date });
-            
-            currentDry = 0;  // Resetar após drop
-        }
-    });
+        globalDryData = [];
+        globalGpData = [];
+        logLatestDate = null;
+        
+        const lines = log.split('\n');
+        let validLines = 0;
+        const entries = [];
+
+        lines.forEach(line => {
+            const m = line.match(LOG_REGEX);
+            if(m) {
+                validLines++;
                 
-        // --- Cálculos ---
-        document.getElementById('r-laps').textContent = totalLaps.toLocaleString();
-    
-    document.getElementById('r-portables').textContent = totalPortables.toLocaleString();
-    document.getElementById('r-cores').textContent = totalCores.toLocaleString();
-    
-    const avgCore = totalCores > 0 ? Math.round(totalLaps / totalCores) : 0;
-    document.getElementById('r-avg-core').textContent = avgCore > 0 ? `~1/${avgCore}` : 'N/A';
-    
-    const realLapsPerHour = totalMinutes > 0 ? (totalLaps / (totalMinutes / 60)) : 0;
-    const uniqueDaysCount = Object.keys(perDay).length;
-    const totalHours = totalMinutes / 60;
-    const avgHoursPerDay = uniqueDaysCount > 0 ? totalHours / uniqueDaysCount : 0;
-    
-    const compHr = (crystHr / crystPerThree) * 3;
-    const tempoCryst = totalCores > 0 ? (totalCores * compNeeded) / compHr : 0;
-    const tempoTotalHoras = (totalMinutes / 60) + tempoCryst;
-    const receita = totalCores * valVenda;
-    const gpPorHora = tempoTotalHoras > 0 ? receita / tempoTotalHoras : 0;
+                const dateRaw = m[1].trim(); 
+                const laps = parseInt(m[2]) || 0;
+                const cores = parseInt(m[3]) || 0;
+                const shards = parseInt(m[4]) || 0;
+                const portables = parseInt(m[5]) || 0;
+                const tempoStr = m[6].toLowerCase();
 
-    document.getElementById('r-receita').textContent = formatGP(receita);
-    document.getElementById('r-time-real').textContent = formatHours(totalMinutes / 60);
-    document.getElementById('r-real-laps-hr').textContent = realLapsPerHour.toFixed(1);
-    document.getElementById('r-avg-hr-day').textContent = formatHours(avgHoursPerDay) + '/dia';
-    document.getElementById('r-time-total').textContent = formatHours(tempoTotalHoras);
-    document.getElementById('r-gp-geral').textContent = formatGP(gpPorHora) + '/hr';
+                let h = 0, min = 0;
+                const hMatch = tempoStr.match(/(\d+)h/);
+                const mMatch = tempoStr.match(/(\d+)m/);
+                if (hMatch) h = parseInt(hMatch[1]);
+                if (mMatch) min = parseInt(mMatch[1]);
+                
+                const entryMinutes = (h * 60) + min;
+                
+                totalLaps += laps;
+                totalCores += cores;
+                totalShards += shards;
+                totalPortables += portables;
+                totalMinutes += entryMinutes;
 
-    const calcGp = (laps) => {
-        if (!laps) return 0;
-        return valVenda / ((laps / lapsHr) + (compNeeded / compHr));
-    };
-    
-    document.getElementById('r-gp-max').textContent = maxDry ? formatGP(calcGp(maxDry)) + '/hr' : 'N/A';
-    document.getElementById('r-gp-min').textContent = minDry !== Infinity ? formatGP(calcGp(minDry)) + '/hr' : 'N/A';
+                let currentDate = parseDateString(dateRaw);
+                
+                if (!logLatestDate || currentDate > logLatestDate) {
+                    logLatestDate = currentDate;
+                }
+                
+                let dia;
+                if (dateRaw.includes('T')) {
+                    dia = dateRaw.split('T')[0];
+                } else if (dateRaw.includes('/')) {
+                    const p = dateRaw.split(' ')[0].split('/');
+                    if(p.length === 3) dia = `${p[2]}-${p[1]}-${p[0]}`; 
+                } else {
+                    dia = dateRaw.split(' ')[0];
+                }            
+                if (!perDay[dia]) {
+                    perDay[dia] = { laps: 0, minutes: 0, cores: 0 };
+                }
+                perDay[dia].laps += laps;
+                perDay[dia].minutes += entryMinutes;
+                perDay[dia].cores += cores;
+                
+                entries.push({
+                    date: currentDate,
+                    laps: laps,
+                    cores: cores,
+                    dia: dia
+                });
+            }
+        });
 
-    // CORREÇÃO: Mostrar seca atual corretamente
-    document.getElementById('r-current-dry').textContent = `${currentDry} laps (${formatHours(currentDry/lapsHr)})`;
-    document.getElementById('r-max-dry').textContent = maxDry ? `${maxDry} laps` : 'N/A';
-    document.getElementById('r-min-dry').textContent = minDry !== Infinity ? `${minDry} laps` : 'N/A';
-
-    const dryPct = maxDry ? (currentDry / maxDry) * 100 : 0;
-    document.getElementById('dryProgressBar').style.width = Math.min(dryPct, 100) + '%';
-
-    const prob = avgCore ? Math.exp(-(currentDry / avgCore)) : 0;
-    document.getElementById('rng-prob').textContent = (prob * 100).toFixed(2) + '%';
-    
-    let eta = 'N/A';
-    if (avgCore) {
-        const remaining = Math.max(0, avgCore - currentDry);
-        eta = formatHours(remaining / lapsHr);
-    }
-    document.getElementById('rng-eta').textContent = eta;
-    
-    let timeToMax = 'N/A';
-    if (maxDry > 0) {
-        const lapsToMax = maxDry - currentDry;
-        if (lapsToMax > 0) {
-            timeToMax = formatHours(lapsToMax / lapsHr);
-        } else {
-            timeToMax = 'Quebrando recorde!'; // Mensagem caso já tenha ultrapassado a maior seca
+        if (validLines === 0) {
+            showToast('Nenhuma linha válida encontrada no log. Verifique o formato.');
+            return;
         }
-    }
-    document.getElementById('rng-time-to-max').textContent = timeToMax;
 
-        // Lista por dia        
-    const list = document.getElementById('r-per-day-list');
-    list.innerHTML = '';
-    const sortedDays = Object.keys(perDay).sort().slice(-4); 
-    
-    sortedDays.forEach(day => {
-        const dayData = perDay[day];
-        const div = document.createElement('div');
-        div.className = 'session-item';
+        if (totalLaps > 100000 || totalCores > 1000) {
+            document.getElementById('alertBox').classList.add('show');
+            document.getElementById('alertBox').innerHTML = `
+                ⚠️ <strong>Valores suspeitos:</strong> ${totalLaps.toLocaleString()} laps / ${totalCores} cores.<br>
+                Verifique se o log está no formato correto.
+            `;
+            return;
+        } else {
+            document.getElementById('alertBox').classList.remove('show');
+        }
+
+        let currentDry = 0;
         
-        const [year, month, dayNum] = day.split('-');
-        const prettyDate = `${dayNum}/${month}/${year}`;        
+        entries.forEach((entry) => {
+            currentDry += entry.laps;
+            
+            if (entry.cores > 0) {
+                if (currentDry > maxDry) maxDry = currentDry;
+                if (currentDry < minDry) minDry = currentDry;
+                
+                const compHr = (crystHr / crystPerThree) * 3;
+                const tempoAgil = currentDry / lapsHr;
+                const tempoCryst = compNeeded / compHr;
+                const gpHr = valVenda / (tempoAgil + tempoCryst);            
+                
+                globalDryData.push({ laps: currentDry, date: entry.date });
+                globalGpData.push({ gpHr: gpHr, date: entry.date });
+                
+                currentDry = 0; 
+            }
+        });
+                    
+        document.getElementById('r-laps').textContent = totalLaps.toLocaleString();
+        document.getElementById('r-portables').textContent = totalPortables.toLocaleString();
+        document.getElementById('r-cores').textContent = totalCores.toLocaleString();
         
-        // Calculando horas e minutos separados para garantir o alinhamento
-        const hrs = Math.floor(dayData.minutes / 60);
-        const mins = Math.round(dayData.minutes % 60);
+        const avgCore = totalCores > 0 ? Math.round(totalLaps / totalCores) : 0;
+        document.getElementById('r-avg-core').textContent = avgCore > 0 ? `~1/${avgCore}` : 'N/A';
         
-        // Textos a serem exibidos (esconde as horas se for 0, ou esconde os minutos se for exato)
-        const hrsText = hrs > 0 ? `${hrs}h` : '';
-        const minsText = (mins > 0 || hrs === 0) ? `${mins}m` : '';        
+        const realLapsPerHour = totalMinutes > 0 ? (totalLaps / (totalMinutes / 60)) : 0;
+        const uniqueDaysCount = Object.keys(perDay).length;
+        const totalHours = totalMinutes / 60;
+        const avgHoursPerDay = uniqueDaysCount > 0 ? totalHours / uniqueDaysCount : 0;
         
-        // Usamos Flexbox e tamanhos fixos para garantir o alinhamento perfeito
-        div.innerHTML = `
-            <span>${prettyDate}</span>
-            <div style="display: flex; gap: 6px; font-weight: bold;">
-                <span style="color: var(--red); width: 65px; text-align: right;">${dayData.cores} core</span>               
-                <span style="color: var(--text); width: 85px; text-align: right;">${dayData.laps.toLocaleString()} laps</span>
-                <div style="display: flex; color: var(--blue); width: 75px; justify-content: flex-end; gap: 4px;">
-                    <span style="width: 35px; text-align: right;">${hrsText}</span>
-                    <span style="width: 35px; text-align: right;">${minsText}</span>
+        const compHr = (crystHr / crystPerThree) * 3;
+        const tempoCryst = totalCores > 0 ? (totalCores * compNeeded) / compHr : 0;
+        const tempoTotalHoras = (totalMinutes / 60) + tempoCryst;
+        const receita = totalCores * valVenda;
+        const gpPorHora = tempoTotalHoras > 0 ? receita / tempoTotalHoras : 0;
+
+        document.getElementById('r-receita').textContent = formatGP(receita);
+        document.getElementById('r-time-real').textContent = formatHours(totalMinutes / 60);
+        document.getElementById('r-real-laps-hr').textContent = realLapsPerHour.toFixed(1);
+        document.getElementById('r-avg-hr-day').textContent = formatHours(avgHoursPerDay) + '/dia';
+        document.getElementById('r-time-total').textContent = formatHours(tempoTotalHoras);
+        document.getElementById('r-gp-geral').textContent = formatGP(gpPorHora) + '/hr';
+
+        const calcGp = (laps) => {
+            if (!laps) return 0;
+            return valVenda / ((laps / lapsHr) + (compNeeded / compHr));
+        };
+        
+        document.getElementById('r-gp-max').textContent = maxDry ? formatGP(calcGp(maxDry)) + '/hr' : 'N/A';
+        document.getElementById('r-gp-min').textContent = minDry !== Infinity ? formatGP(calcGp(minDry)) + '/hr' : 'N/A';
+
+        document.getElementById('r-current-dry').textContent = `${currentDry} laps (${formatHours(currentDry/lapsHr)})`;
+        document.getElementById('r-max-dry').textContent = maxDry ? `${maxDry} laps` : 'N/A';
+        document.getElementById('r-min-dry').textContent = minDry !== Infinity ? `${minDry} laps` : 'N/A';
+
+        const dryPct = maxDry ? (currentDry / maxDry) * 100 : 0;
+        document.getElementById('dryProgressBar').style.width = Math.min(dryPct, 100) + '%';
+
+        const prob = avgCore ? Math.exp(-(currentDry / avgCore)) : 0;
+        document.getElementById('rng-prob').textContent = (prob * 100).toFixed(2) + '%';
+        
+        let eta = 'N/A';
+        if (avgCore) {
+            const remaining = Math.max(0, avgCore - currentDry);
+            eta = formatHours(remaining / lapsHr);
+        }
+        document.getElementById('rng-eta').textContent = eta;
+        
+        let timeToMax = 'N/A';
+        if (maxDry > 0) {
+            const lapsToMax = maxDry - currentDry;
+            if (lapsToMax > 0) {
+                timeToMax = formatHours(lapsToMax / lapsHr);
+            } else {
+                timeToMax = 'Quebrando recorde!'; 
+            }
+        }
+        document.getElementById('rng-time-to-max').textContent = timeToMax;
+
+        const list = document.getElementById('r-per-day-list');
+        list.innerHTML = '';
+        const sortedDays = Object.keys(perDay).sort().slice(-4); 
+        
+        sortedDays.forEach(day => {
+            const dayData = perDay[day];
+            const div = document.createElement('div');
+            div.className = 'session-item';
+            
+            const [year, month, dayNum] = day.split('-');
+            const prettyDate = `${dayNum}/${month}/${year}`;        
+            
+            const hrs = Math.floor(dayData.minutes / 60);
+            const mins = Math.round(dayData.minutes % 60);
+            
+            const hrsText = hrs > 0 ? `${hrs}h` : '';
+            const minsText = (mins > 0 || hrs === 0) ? `${mins}m` : '';        
+            
+            div.innerHTML = `
+                <span>${prettyDate}</span>
+                <div style="display: flex; gap: 6px; font-weight: bold;">
+                    <span style="color: var(--red); width: 65px; text-align: right;">${dayData.cores} core</span>               
+                    <span style="color: var(--text); width: 85px; text-align: right;">${dayData.laps.toLocaleString()} laps</span>
+                    <div style="display: flex; color: var(--blue); width: 75px; justify-content: flex-end; gap: 4px;">
+                        <span style="width: 35px; text-align: right;">${hrsText}</span>
+                        <span style="width: 35px; text-align: right;">${minsText}</span>
+                    </div>
                 </div>
-            </div>
-        `;
-        
-        list.appendChild(div);
-    });
+            `;
+            
+            list.appendChild(div);
+        });
 
-    updateCharts();
+        updateCharts();
 
-    document.getElementById('setupContainer').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    document.getElementById('btnVoltar').style.display = 'inline-block';
-}
+        document.getElementById('setupContainer').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('btnVoltar').style.display = 'inline-block';
+    }
 
     function filterDataByTimeframe(dataArray, timeframe) {
         if (timeframe === 'total' || !logLatestDate) return dataArray;
@@ -1062,26 +1073,58 @@
         });
     }
 
+    // Função NOVA para alternar o gráfico através dos botões
+    function switchChartType(type) {
+        currentChartType = type;
+        
+        // Atualiza estilo dos botões
+        document.getElementById('btnChartDry').classList.toggle('active', type === 'dry');
+        document.getElementById('btnChartGp').classList.toggle('active', type === 'gp');
+        
+        // Re-renderiza o gráfico com o novo tipo
+        updateCharts();
+    }
+
     function updateCharts() {
-        const dryFilter = document.getElementById('filterDry').value;
-        const gpFilter = document.getElementById('filterGp').value;
-        
-        const filteredDry = filterDataByTimeframe(globalDryData, dryFilter);
-        const filteredGp = filterDataByTimeframe(globalGpData, gpFilter);
-        
+        const filter = document.getElementById('mainChartFilter').value;
         const lapsHrValue = parseFloat(document.getElementById('lapsHr').value) || 83;
+        
+        // Atualiza a Label de Data Dinâmica
+        let dateLabelText = "Período Completo";
+        if (logLatestDate) {
+            let startDate = new Date(logLatestDate);
+            
+            if (filter === 'week') {
+                startDate.setDate(startDate.getDate() - 7);
+                dateLabelText = `${formatDateBR(startDate)} a ${formatDateBR(logLatestDate)} (Última Semana)`;
+            } else if (filter === 'month') {
+                startDate.setDate(startDate.getDate() - 30);
+                dateLabelText = `${formatDateBR(startDate)} a ${formatDateBR(logLatestDate)} (Último Mês)`;
+            } else {
+                // Tenta achar o primeiro log real
+                let firstDate = null;
+                if (globalDryData.length > 0) firstDate = globalDryData[0].date;
+                if (firstDate) {
+                    dateLabelText = `${formatDateBR(firstDate)} a ${formatDateBR(logLatestDate)} (Total)`;
+                }
+            }
+        }
+        document.getElementById('dateRangeLabel').textContent = dateLabelText;
+
+        const filteredDry = filterDataByTimeframe(globalDryData, filter);
+        const filteredGp = filterDataByTimeframe(globalGpData, filter);
         
         renderCharts(filteredDry, filteredGp, lapsHrValue);
     }
 
     function renderCharts(dryData, gpData, lapsHr) {
-        if (charts.dry) charts.dry.destroy();
-        if (charts.gp) charts.gp.destroy();
+        if (mainChartInstance) {
+            mainChartInstance.destroy();
+        }
 
-        // Configuração de Tooltip compartilhada para mostrar ambas as informações
         const sharedTooltipOptions = {
-            padding: 12, // Deixa a caixa preta mais "gordinha" e com respiro
-            displayColors: false, // Remove a caixinha quadrada padrão que estava com a cor errada
+            padding: 12, 
+            displayColors: false, 
             titleFont: { size: 14 },
             bodyFont: { size: 13, family: 'JetBrains Mono' },
             callbacks: {
@@ -1090,7 +1133,6 @@
                     const laps = dryData[index]?.laps || 0;
                     const gpHr = gpData[index]?.gpHr || 0;
                     const timeInHours = laps / (lapsHr > 0 ? lapsHr : 1);
-                    // Retorna um array de strings para criar múltiplas linhas no tooltip
                     return [
                          `🔴 Laps:  ${laps.toLocaleString()}`,
                         ``, 
@@ -1102,62 +1144,66 @@
             }
         };
         
-        charts.dry = new Chart(document.getElementById('dryChart'), {
-            type: 'line',
-            data: {
-                labels: dryData.map((_, i) => `#${i+1}`),
-                datasets: [{
-                    label: 'Seca',
-                    data: dryData.map(d => d.laps),
-                    borderColor: '#f38ba8',
-                    backgroundColor: 'rgba(243, 139, 168, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: sharedTooltipOptions // Aplicando o tooltip personalizado
-                },
-                scales: {
-                    y: { grid: { color: 'rgba(69, 71, 90, 0.3)' }, ticks: { color: '#bac2de', font: { family: 'JetBrains Mono' } } },
-                    x: { grid: { display: false }, ticks: { display: false } }
-                }
-            }
-        });
+        const ctx = document.getElementById('mainChart');
 
-        charts.gp = new Chart(document.getElementById('gpChart'), {
-            type: 'line',
-            data: {
-                labels: gpData.map((_, i) => `#${i+1}`),
-                datasets: [{
-                    label: 'GP/hr',
-                    data: gpData.map(d => d.gpHr),
-                    borderColor: '#cba6f7',
-                    backgroundColor: 'rgba(203, 166, 247, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    pointRadius: 3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: sharedTooltipOptions // Aplicando o tooltip personalizado
+        if (currentChartType === 'dry') {
+            mainChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dryData.map((_, i) => `#${i+1}`),
+                    datasets: [{
+                        label: 'Seca',
+                        data: dryData.map(d => d.laps),
+                        borderColor: '#f38ba8',
+                        backgroundColor: 'rgba(243, 139, 168, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4
+                    }]
                 },
-                scales: {
-                    y: { grid: { color: 'rgba(69, 71, 90, 0.3)' }, ticks: { color: '#bac2de', callback: v => formatGP(v) + '/h' } },
-                    x: { grid: { display: false }, ticks: { display: false } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: sharedTooltipOptions 
+                    },
+                    scales: {
+                        y: { grid: { color: 'rgba(69, 71, 90, 0.3)' }, ticks: { color: '#bac2de', font: { family: 'JetBrains Mono' } } },
+                        x: { grid: { display: false }, ticks: { display: false } }
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            mainChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: gpData.map((_, i) => `#${i+1}`),
+                    datasets: [{
+                        label: 'GP/hr',
+                        data: gpData.map(d => d.gpHr),
+                        borderColor: '#cba6f7',
+                        backgroundColor: 'rgba(203, 166, 247, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: sharedTooltipOptions 
+                    },
+                    scales: {
+                        y: { grid: { color: 'rgba(69, 71, 90, 0.3)' }, ticks: { color: '#bac2de', callback: v => formatGP(v) + '/h' } },
+                        x: { grid: { display: false }, ticks: { display: false } }
+                    }
+                }
+            });
+        }
     }
 
     document.addEventListener('keydown', (e) => {
