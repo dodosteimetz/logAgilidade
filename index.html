@@ -526,7 +526,7 @@
                     </div>
                     <div class="input-group">
                         <label>Laps por Hora <span class="tooltip-icon" data-tip="Sua média de voltas/hora">ⓘ</span></label>
-                        <input type="number" id="lapsHr" value="83">
+                        <input type="number" id="lapsHr" value="84">
                     </div>
                     <div class="input-group">
                         <label>Crystals / Hora <span class="tooltip-icon" data-tip="Farm de cristais">ⓘ</span></label>
@@ -837,7 +837,7 @@
         }
 
         const valVenda = parseInputGP(document.getElementById('valVenda').value);
-        const lapsHr = parseFloat(document.getElementById('lapsHr').value) || 83;
+        const lapsHr = parseFloat(document.getElementById('lapsHr').value) || 84;
         const crystHr = parseFloat(document.getElementById('crystHr').value) || 2250;
         const crystPerThree = parseFloat(document.getElementById('crystPerThree').value) || 750;
         const compNeeded = parseFloat(document.getElementById('compNeeded').value) || 7;
@@ -1072,7 +1072,7 @@
 
     function updateCharts() {
         const filter = document.getElementById('mainChartFilter').value;
-        const lapsHrValue = parseFloat(document.getElementById('lapsHr').value) || 83;
+        const lapsHrValue = parseFloat(document.getElementById('lapsHr').value) || 84;
         
         let dateLabelText = "Período Completo";
         if (logLatestDate) {
